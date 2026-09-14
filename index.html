@@ -12,7 +12,7 @@
     --green: #34c98e; --red: #e05656; --amber: #e8a33d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; padding-bottom: 40px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; padding-bottom: 80px; }
   header { position: sticky; top: 0; z-index: 30; background: rgba(15,15,18,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 16px; }
   header .top { display: flex; align-items: center; gap: 12px; }
   header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
@@ -31,8 +31,11 @@
   .agenda { display: flex; flex-direction: column; gap: 8px; }
   .agenda.drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 12px; }
   .acard { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: grab; }
-  .acard.dragging { opacity: 0.4; }
   .acard .thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; background: #222; }
+  .acard .stack { position: relative; width: 56px; height: 56px; flex: none; }
+  .acard .stack img { position: absolute; width: 56px; height: 56px; border-radius: 8px; object-fit: cover; border: 1px solid var(--card); }
+  .acard .stack img:nth-child(1){ top:0; left:0; }
+  .acard .stack img:nth-child(2){ top:3px; left:3px; opacity:.6; }
   .acard .info { flex: 1; min-width: 0; }
   .acard .info .cap { font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .acard .info .meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -41,6 +44,7 @@
   .pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
   .pill.ok { background: var(--green); color: #05210f; }
   .pill.no { background: var(--red); color: #fff; }
+  .pill.car { background: var(--accent2); color: #fff; }
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
   .grid.drop { outline: 2px dashed var(--accent2); outline-offset: 4px; border-radius: 12px; }
@@ -49,7 +53,6 @@
   .cell.dim img { opacity: .35; filter: grayscale(.7); }
   .cell .p { position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
 
-  /* calendário */
   .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
   .cal-nav .mnth { font-weight: 700; font-size: 14px; }
   .cal-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; }
@@ -70,6 +73,8 @@
   .sheet { background: var(--bg); border: 1px solid var(--border); border-bottom: 0; border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; padding: 16px; animation: up .22s ease; }
   @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
   .sheet .photo { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); }
+  .sheet .photos { display: flex; gap: 6px; overflow-x: auto; }
+  .sheet .photos img { width: 90px; height: 90px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
   .sheet .label { font-size: 11px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
   .sheet textarea, .sheet input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; font-family: inherit; }
   .sheet textarea { resize: vertical; }
@@ -84,6 +89,17 @@
   .btn.sm { padding: 8px 10px; font-size: 12px; }
   .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .row .btn { flex: 1; }
+
+  /* chat Simone */
+  #simone-fab { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-size: 24px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 60; }
+  .chat-msg { margin: 8px 0; max-width: 85%; padding: 10px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+  .chat-msg.user { background: var(--accent); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+  .chat-msg.simone { background: var(--card); border: 1px solid var(--border); margin-right: auto; border-bottom-left-radius: 4px; }
+  .chat-msg.thinking { color: var(--muted); font-style: italic; }
+  .chat-input { display: flex; gap: 8px; margin-top: 10px; }
+  .chat-input input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 13px; font-size: 14px; }
+  .chat-input button { border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 0 18px; font-weight: 700; cursor: pointer; }
+
   .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--green); color: #05210f; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 24px; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .25s; }
   .toast.show { opacity: 1; }
   .toast.err { background: var(--red); color: #fff; }
@@ -96,7 +112,7 @@
     <div class="tokens" id="tokens">—</div>
     <button class="gear" id="gear" title="Configurar">⚙️</button>
   </div>
-  <div class="hint" id="hint">Arraste para reordenar ou tirar da agenda. Toque numa foto para editar.</div>
+  <div class="hint" id="hint">Arraste para reordenar. Toque numa foto para editar. Use o botão rosa pra falar com a Simone.</div>
 </header>
 
 <div class="section">
@@ -116,19 +132,20 @@
   <div class="empty" id="gaveta-empty" style="display:none">Gaveta vazia.</div>
 </div>
 
+<button id="simone-fab" title="Falar com a Simone">💬</button>
+
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
+<div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet"></div></div>
 <div class="toast" id="toast">Salvo</div>
 
 <script type="application/json" id="data">null</script>
 
 <script>
-// ---------------- estado ----------------
-let photos = [], extras = [], agenda = [];
+let photos = [], extras = [], agenda = [], carousels = [];
 let posted = new Set(), usage = {}, generatedAt = null;
 let isHosted = false;
-let viewMode = 'list';       // 'list' | 'cal'
-let calMonth = new Date();
+let viewMode = 'list', calMonth = new Date();
 
 const REPO_OWNER = 'orlandolovecapture-ops';
 const REPO_NAME = 'cura-poster';
@@ -142,9 +159,10 @@ const $ = id => document.getElementById(id);
 const toast = (m, err) => { const t = $('toast'); t.textContent = m; t.classList.toggle('err', !!err); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); };
 
 function photoByKey(k){ return [...photos, ...extras].find(p => p.image_key === k); }
+function carouselById(id){ return carousels.find(c => c.id === id); }
 function inAgenda(k){ return agenda.some(a => a.image_key === k); }
+function inAgendaCar(id){ return agenda.some(a => a.carousel_id === id); }
 
-// ---------------- GitHub API ----------------
 function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
 function b64d(s){ return decodeURIComponent(escape(atob(s))); }
 function pat(){ return localStorage.getItem(PAT_KEY) || ''; }
@@ -168,10 +186,7 @@ async function ghPut(path, obj, sha, msg){
   return r.json();
 }
 
-// ---------------- custo em reais ----------------
-function priceCfg(){
-  try { return JSON.parse(localStorage.getItem(PRICE_KEY)) || {}; } catch(e){ return {}; }
-}
+function priceCfg(){ try { return JSON.parse(localStorage.getItem(PRICE_KEY)) || {}; } catch(e){ return {}; } }
 function monthCost(){
   const m = new Date().toISOString().slice(0,7);
   const u = usage[m]; if (!u) return null;
@@ -179,8 +194,7 @@ function monthCost(){
   const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
   const input = u.input ?? Math.round((u.tokens||0) * 0.6);
   const output = u.output ?? Math.round((u.tokens||0) * 0.4);
-  const usd = (input/1e6)*inP + (output/1e6)*outP;
-  return usd * brl;
+  return ((input/1e6)*inP + (output/1e6)*outP) * brl;
 }
 function renderTokens(){
   const m = new Date().toISOString().slice(0,7);
@@ -191,14 +205,13 @@ function renderTokens(){
   $('tokens').innerHTML = `${cstr} · <b>${tok.toLocaleString('pt-BR')}</b> tok`;
 }
 
-// ---------------- datas ----------------
 function fmt(s){ if(!s) return '—'; const d = new Date(s); return d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
 function toLocalInput(s){ const d = new Date(s); const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
 function fromLocalInput(v){ return v ? new Date(v).toISOString() : null; }
 function nextFreeSlot(){
   let base = new Date();
-  const last = agenda.map(a=>new Date(a.scheduled_at)).filter(d=>!isNaN(d)).sort((a,b)=>b-a)[0];
-  if (last > base) base = last;
+  const all = agenda.map(a=>new Date(a.scheduled_at)).filter(d=>!isNaN(d)).sort((a,b)=>b-a);
+  if (all.length && all[0] > base) base = all[0];
   for (let d=0; d<60; d++) for (const [h,m] of [[9,0],[18,0]]){
     const cand = new Date(base); cand.setDate(cand.getDate()+d); cand.setHours(h,m,0,0);
     if (cand > new Date()) return cand.toISOString();
@@ -206,15 +219,24 @@ function nextFreeSlot(){
   return new Date(Date.now()+86400000).toISOString();
 }
 
-// ---------------- render ----------------
-function pill(p){
-  if (posted.has(p.image_key)) return '<span class="pill ok">publicada</span>';
-  if (p.status === 'rejected') return '<span class="pill no">recusada</span>';
-  if (p.status === 'approved') return '<span class="pill ok">aprovada</span>';
-  return '';
-}
+function pillSingle(p){ return posted.has(p.image_key) ? '<span class="pill ok">publicada</span>' : (p.status==='rejected' ? '<span class="pill no">recusada</span>' : (p.status==='approved' ? '<span class="pill ok">aprovada</span>' : '')); }
+function pillCar(c){ return posted.has(c.id) ? '<span class="pill ok">publicado</span>' : (c.status==='rejected' ? '<span class="pill no">recusado</span>' : '<span class="pill car">▦ carrossel</span>'); }
+
 function renderList(){
   $('agenda').innerHTML = agenda.map((a,i) => {
+    if (a.kind === 'carousel'){
+      const c = carouselById(a.carousel_id); if (!c) return '';
+      const past = new Date(a.scheduled_at) < new Date();
+      const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
+      const img2 = c.urls && c.urls[1] ? c.urls[1] : '';
+      return `<div class="acard" draggable="true" data-cid="${esc(c.id)}">
+        <span class="grip">⠿</span><span class="num">${i+1}</span>
+        <span class="stack">${img1?`<img src="${esc(img1)}">`:''}${img2?`<img src="${esc(img2)}">`:''}</span>
+        <div class="info">
+          <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
+          <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
+        </div></div>`;
+    }
     const p = photoByKey(a.image_key); if (!p) return '';
     const past = new Date(a.scheduled_at) < new Date();
     return `<div class="acard" draggable="true" data-k="${esc(a.image_key)}">
@@ -222,15 +244,14 @@ function renderList(){
       <img class="thumb" src="${esc(p.url)}" alt="">
       <div class="info">
         <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
-        <div class="meta">${pill(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
+        <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
       </div></div>`;
   }).join('');
 }
 function renderCal(){
   const y = calMonth.getFullYear(), mo = calMonth.getMonth();
-  const first = new Date(y, mo, 1);
   const days = new Date(y, mo+1, 0).getDate();
-  const off = first.getDay();
+  const off = new Date(y, mo, 1).getDay();
   const byDay = {};
   agenda.forEach(a => {
     const d = new Date(a.scheduled_at);
@@ -247,8 +268,14 @@ function renderCal(){
     const isToday = today.getFullYear()===y && today.getMonth()===mo && today.getDate()===day;
     h += `<div class="cal-day ${isToday?'today':''}"><div class="dnum">${day}</div>`;
     items.forEach(a => {
-      const p = photoByKey(a.image_key); if (!p) return;
-      h += `<div class="cal-item" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+      const t = new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if (a.kind === 'carousel'){
+        const c = carouselById(a.carousel_id); if (!c) return;
+        h += `<div class="cal-item" data-cid="${esc(c.id)}">▦<span>${t}</span></div>`;
+      } else {
+        const p = photoByKey(a.image_key); if (!p) return;
+        h += `<div class="cal-item" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t}</span></div>`;
+      }
     });
     h += `</div>`;
   }
@@ -278,25 +305,31 @@ $('view-list').addEventListener('click', () => { viewMode='list'; render(); });
 $('view-cal').addEventListener('click', () => { viewMode='cal'; render(); });
 
 // ---------------- drag & drop ----------------
-let dragKey = null;
-document.addEventListener('dragstart', e => { const el = e.target.closest('[draggable="true"]'); if (el){ dragKey = el.dataset.k; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain', dragKey);}catch(_){} } });
-document.addEventListener('dragend', () => { dragKey = null; $('agenda').classList.remove('drop'); $('gaveta').classList.remove('drop'); });
+let dragKey = null, dragCid = null;
+document.addEventListener('dragstart', e => {
+  const el = e.target.closest('[draggable="true"]');
+  if (el){ dragKey = el.dataset.k || null; dragCid = el.dataset.cid || null; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain', dragKey || dragCid);}catch(_){} }
+});
+document.addEventListener('dragend', () => { dragKey = null; dragCid = null; $('agenda').classList.remove('drop'); $('gaveta').classList.remove('drop'); });
 
 const agendaEl = $('agenda');
 agendaEl.addEventListener('dragover', e => { e.preventDefault(); agendaEl.classList.add('drop'); });
 agendaEl.addEventListener('dragleave', () => agendaEl.classList.remove('drop'));
 agendaEl.addEventListener('drop', e => {
   e.preventDefault(); agendaEl.classList.remove('drop');
-  const k = dragKey || e.dataTransfer.getData('text/plain'); if (!k) return;
+  const id = dragKey || dragCid || e.dataTransfer.getData('text/plain'); if (!id) return;
   const target = e.target.closest('.acard');
-  if (inAgenda(k)){
-    const from = agenda.findIndex(a => a.image_key === k);
-    let to = target ? agenda.findIndex(a => a.image_key === target.dataset.k) : agenda.length - 1;
+  const cur = dragCid ? {carousel_id: dragCid} : {image_key: dragKey};
+  const isIn = dragCid ? inAgendaCar(dragCid) : inAgenda(dragKey);
+  const findIdx = a => dragCid ? (a.carousel_id === dragCid) : (a.image_key === dragKey);
+  if (isIn){
+    const from = agenda.findIndex(findIdx);
+    let to = target ? agenda.findIndex(a => (a.carousel_id||a.image_key) === (target.dataset.cid||target.dataset.k)) : agenda.length - 1;
     if (from < 0) return;
     const [item] = agenda.splice(from, 1); agenda.splice(to, 0, item);
   } else {
-    const item = { image_key: k, scheduled_at: nextFreeSlot() };
-    if (target){ const to = agenda.findIndex(a => a.image_key === target.dataset.k); agenda.splice(to, 0, item); }
+    const item = dragCid ? {kind:'carousel', carousel_id: dragCid, scheduled_at: nextFreeSlot()} : {image_key: dragKey, scheduled_at: nextFreeSlot()};
+    if (target){ const to = agenda.findIndex(a => (a.carousel_id||a.image_key) === (target.dataset.cid||target.dataset.k)); agenda.splice(to, 0, item); }
     else agenda.push(item);
   }
   render(); persist('reordenado');
@@ -307,19 +340,22 @@ gavetaEl.addEventListener('dragover', e => { e.preventDefault(); gavetaEl.classL
 gavetaEl.addEventListener('dragleave', () => gavetaEl.classList.remove('drop'));
 gavetaEl.addEventListener('drop', e => {
   e.preventDefault(); gavetaEl.classList.remove('drop');
-  const k = dragKey || e.dataTransfer.getData('text/plain');
-  if (k && inAgenda(k)){ agenda = agenda.filter(a => a.image_key !== k); render(); persist('voltou pra gaveta'); }
+  const id = dragKey || dragCid || e.dataTransfer.getData('text/plain');
+  if (dragCid && inAgendaCar(dragCid)){ agenda = agenda.filter(a => a.carousel_id !== dragCid); render(); persist('voltou pra gaveta'); }
+  else if (dragKey && inAgenda(dragKey)){ agenda = agenda.filter(a => a.image_key !== dragKey); render(); persist('voltou pra gaveta'); }
 });
 
 // ---------------- clique ----------------
 document.addEventListener('click', e => {
-  const c = e.target.closest('.acard, .cell, .cal-item');
-  if (c) openSheet(c.dataset.k);
+  const cell = e.target.closest('.acard, .cell, .cal-item');
+  if (!cell) return;
+  if (cell.dataset.cid) openCarSheet(cell.dataset.cid);
+  else if (cell.dataset.k) openSheet(cell.dataset.k);
 });
 
-let curKey = null;
+let curKey = null, curCid = null;
 function openSheet(k){
-  curKey = k;
+  curKey = k; curCid = null;
   const p = photoByKey(k);
   const ag = agenda.find(a => a.image_key === k);
   const isScheduled = !!ag;
@@ -342,7 +378,7 @@ function openSheet(k){
     <div class="label">Legenda</div>
     <textarea id="cap" rows="4">${esc(p.caption)}</textarea>
     <div class="count" id="capcount"></div>
-    <div class="label">Hashtags (separadas por espaço)</div>
+    <div class="label">Hashtags</div>
     <textarea id="tags" rows="2">${esc((p.hashtags||[]).join(' '))}</textarea>
     <div class="label">Taguear pessoas (@usuario, vírgula)</div>
     <input id="usertags" placeholder="@noiva, @noivo" value="${esc((p.user_tags||[]).join(', '))}">
@@ -352,6 +388,31 @@ function openSheet(k){
   const cap = $('cap'); const cnt = () => $('capcount').textContent = cap.value.length + ' / 2200';
   cap.addEventListener('input', cnt); cnt();
   $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a)));
+}
+
+function openCarSheet(cid){
+  curCid = cid; curKey = null;
+  const c = carouselById(cid);
+  const ag = agenda.find(a => a.carousel_id === cid);
+  $('sheet').innerHTML = `
+    <div class="photos">${(c.urls||[]).map(u => `<img src="${esc(u)}">`).join('')}</div>
+    <div class="label" style="margin-top:10px">${esc(c.title || '')} · ${(c.image_keys||[]).length} fotos</div>
+    <div class="row">
+      <button class="btn ok" data-a="approve">✓ Aprovar</button>
+      <button class="btn no" data-a="reject">✗ Recusar</button>
+    </div>
+    ${ag ? `
+    <div class="label">Data e hora do post</div>
+    <input type="datetime-local" id="sched" value="${toLocalInput(ag.scheduled_at)}">
+    <div class="row"><button class="btn ghost sm" data-a="unschedule">Tirar da agenda</button></div>` : ''}
+    <div class="label">Legenda</div>
+    <textarea id="cap" rows="4">${esc(c.caption)}</textarea>
+    <div class="label">Hashtags</div>
+    <textarea id="tags" rows="2">${esc((c.hashtags||[]).join(' '))}</textarea>
+    <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
+  `;
+  $('overlay').classList.add('open');
+  $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => actCar(b.dataset.a)));
 }
 
 function act(a){
@@ -377,6 +438,20 @@ function act(a){
   else { closeSheet(); render(); persist('atualizado'); }
 }
 
+function actCar(a){
+  const c = carouselById(curCid); if (!c) return;
+  if (a === 'approve') c.status = 'approved';
+  else if (a === 'reject') c.status = 'rejected';
+  else if (a === 'unschedule'){ agenda = agenda.filter(x => x.carousel_id !== curCid); }
+  else if (a === 'save'){
+    c.caption = $('cap').value.trim();
+    const t = $('tags').value.trim(); c.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
+    const s = $('sched'); if (s){ const ag = agenda.find(x => x.carousel_id === curCid); if (ag) ag.scheduled_at = fromLocalInput(s.value) || ag.scheduled_at; }
+  }
+  if (a === 'save'){ closeSheet(); render(); persist('carrossel editado'); }
+  else { closeSheet(); render(); persist('atualizado'); }
+}
+
 function swap(k){
   const p = photoByKey(k);
   if (!extras.length){ toast('Sem reservas ainda', true); return; }
@@ -387,16 +462,15 @@ function swap(k){
   closeSheet(); render(); persist('foto trocada');
 }
 
-function closeSheet(){ $('overlay').classList.remove('open'); curKey = null; }
+function closeSheet(){ $('overlay').classList.remove('open'); curKey = null; curCid = null; }
 $('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeSheet(); });
 
-// ---------------- persistência ----------------
 async function persist(msg){
   if (!isHosted){ toast(msg + ' (preview)'); return; }
   if (!pat()){ openSettings(); return; }
   try {
     const cur = await ghGet('state/queue.json');
-    const obj = { generated_at: cur ? cur.data.generated_at : generatedAt, photos, extras, agenda };
+    const obj = { generated_at: cur ? cur.data.generated_at : generatedAt, photos, extras, agenda, carousels };
     await ghPut('state/queue.json', obj, cur ? cur.sha : undefined, msg || 'edição pelo app');
     toast('Salvo na nuvem ✓');
   } catch(e){ toast('Erro ao salvar: ' + e.message, true); }
@@ -409,15 +483,13 @@ function openSettings(){
     <div class="label">Chave de acesso (token do GitHub)</div>
     <p class="help">Cole um <b>personal access token</b> com acesso ao repositório <b>${REPO_OWNER}/${REPO_NAME}</b> (permissão <b>Contents: Read &amp; Write</b>).</p>
     <input id="pat-input" type="password" placeholder="github_pat_..." value="${esc(pat())}">
-
-    <div class="label">Preço do Gemini (USD por 1 milhão de tokens)</div>
-    <p class="help">Padrão estimado: entrada 0,15 · saída 0,60. Ajuste conforme a tabela atual do Google.</p>
-    <input id="price-in" type="number" step="0.01" min="0" placeholder="entrada (ex: 0.15)" value="${pc.input ?? 0.15}">
+    <div class="label">Preço do Gemini (USD por 1M tokens)</div>
+    <p class="help">Padrão: entrada 0,15 · saída 0,60.</p>
+    <input id="price-in" type="number" step="0.01" min="0" placeholder="entrada" value="${pc.input ?? 0.15}">
     <div style="height:6px"></div>
-    <input id="price-out" type="number" step="0.01" min="0" placeholder="saída (ex: 0.60)" value="${pc.output ?? 0.60}">
-    <div class="label">Cotação do dólar (USD → BRL)</div>
+    <input id="price-out" type="number" step="0.01" min="0" placeholder="saída" value="${pc.output ?? 0.60}">
+    <div class="label">Cotação USD → BRL</div>
     <input id="price-brl" type="number" step="0.01" min="0" placeholder="ex: 5.50" value="${pc.usd_brl ?? 5.5}">
-
     <div class="row">
       <button class="btn ghost" data-a="cancel">Cancelar</button>
       <button class="btn primary" data-a="savecfg" style="flex:2">Salvar</button>
@@ -437,13 +509,75 @@ function openSettings(){
 $('gear').addEventListener('click', openSettings);
 $('settings-overlay').addEventListener('click', e => { if (e.target.id === 'settings-overlay') $('settings-overlay').classList.remove('open'); });
 
+// ---------------- Simone ----------------
+let lastSimoneAt = null;
+function openSimone(){
+  $('simone-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💬 Simone</div>
+    <div id="chat" style="max-height:50vh; overflow-y:auto"></div>
+    <div class="chat-input">
+      <input id="simone-input" placeholder='Ex.: "faça um carrossel do casal Ana e Pedro"'>
+      <button id="simone-send">Enviar</button>
+    </div>
+  `;
+  $('simone-overlay').classList.add('open');
+  $('simone-send').addEventListener('click', () => {
+    const v = $('simone-input').value.trim();
+    if (v){ sendSimone(v); $('simone-input').value = ''; }
+  });
+  $('simone-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = $('simone-input').value.trim(); if (v){ sendSimone(v); $('simone-input').value = ''; } } });
+  // carrega última resposta se existir
+  if (lastSimoneAt){ addChat('simone', lastSimoneReply || ''); }
+}
+function addChat(who, text){
+  const c = $('chat'); if (!c) return;
+  const d = document.createElement('div');
+  d.className = 'chat-msg ' + (who === 'user' ? 'user' : (who === 'simone' ? 'simone' : 'simone thinking'));
+  d.textContent = text;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+async function sendSimone(text){
+  addChat('user', text);
+  if (!isHosted){ addChat('simone', '(no preview a Simone não roda — ela funciona no app hospedado)'); return; }
+  if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
+  try {
+    const cur = await ghGet('state/simone_request.json');
+    await ghPut('state/simone_request.json', { request: text, at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
+    let before = null;
+    try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
+    addChat('simone', '…');
+    const thinkEl = $('chat').lastElementChild;
+    for (let i=0; i<36; i++){
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        const r = await ghGet('state/simone_reply.json');
+        if (r && r.data.at !== before){
+          if (thinkEl) thinkEl.remove();
+          addChat('simone', r.data.reply);
+          lastSimoneReply = r.data.reply;
+          await loadRemote();
+          return;
+        }
+      } catch(_){}
+    }
+    if (thinkEl) thinkEl.remove();
+    addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
+  } catch(e){
+    addChat('simone', 'Erro: ' + e.message);
+  }
+}
+$('simone-fab').addEventListener('click', openSimone);
+$('simone-overlay').addEventListener('click', e => { if (e.target.id === 'simone-overlay') $('simone-overlay').classList.remove('open'); });
+
 // ---------------- carregamento ----------------
 async function loadRemote(){
   try {
-    const [q, p, u] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json')]);
-    if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; generatedAt = q.data.generated_at; }
+    const [q, p, u, s] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json')]);
+    if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; carousels = q.data.carousels || []; generatedAt = q.data.generated_at; }
     if (p){ posted = new Set(Object.keys(p.data.posted || {})); }
     if (u){ usage = u.data; }
+    if (s){ lastSimoneReply = s.data.reply; lastSimoneAt = s.data.at; }
     render();
   } catch(e){ toast('Erro ao carregar: ' + e.message, true); }
 }
@@ -452,7 +586,7 @@ async function loadRemote(){
   const raw = document.getElementById('data').textContent.trim();
   if (raw && raw !== 'null' && raw !== '{}'){
     const D = JSON.parse(raw);
-    photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || [];
+    photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || []; carousels = D.carousels || [];
     posted = new Set(D.posted || []); usage = D.usage || {};
     render();
   } else {
