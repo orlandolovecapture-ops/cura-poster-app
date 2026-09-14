@@ -24,6 +24,9 @@
   .section { padding: 14px 16px 4px; }
   .section .stitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   .section .stitle .n { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; font-size: 11px; }
+  .viewseg { margin-left: auto; display: flex; gap: 3px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+  .viewseg button { border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+  .viewseg button.on { background: var(--accent); color: #fff; }
 
   .agenda { display: flex; flex-direction: column; gap: 8px; }
   .agenda.drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 12px; }
@@ -46,6 +49,20 @@
   .cell.dim img { opacity: .35; filter: grayscale(.7); }
   .cell .p { position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
 
+  /* calendário */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .cal-nav .mnth { font-weight: 700; font-size: 14px; }
+  .cal-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-dow { text-align: center; font-size: 10px; color: var(--muted); padding: 4px 0; font-weight: 700; }
+  .cal-day { min-height: 64px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; font-size: 11px; }
+  .cal-day.empty { background: transparent; border-color: transparent; }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day .dnum { color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+  .cal-item { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 6px; padding: 2px 3px; margin-bottom: 3px; cursor: pointer; overflow: hidden; }
+  .cal-item img { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; flex: none; }
+  .cal-item span { font-size: 9px; color: var(--muted); white-space: nowrap; }
+
   .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
 
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 50; display: none; align-items: flex-end; justify-content: center; }
@@ -57,6 +74,7 @@
   .sheet textarea, .sheet input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; font-family: inherit; }
   .sheet textarea { resize: vertical; }
   .sheet .count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 3px; }
+  .sheet .help { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
   .btn { border: 0; border-radius: 10px; padding: 11px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; }
   .btn.ok { background: var(--green); color: #05210f; }
   .btn.no { background: var(--red); }
@@ -82,7 +100,12 @@
 </header>
 
 <div class="section">
-  <div class="stitle">📅 Agenda <span class="n" id="agenda-n">0</span></div>
+  <div class="stitle">📅 Agenda <span class="n" id="agenda-n">0</span>
+    <div class="viewseg">
+      <button id="view-list" class="on">Lista</button>
+      <button id="view-cal">Calendário</button>
+    </div>
+  </div>
   <div class="agenda" id="agenda"></div>
   <div class="empty" id="agenda-empty" style="display:none">Agenda vazia — arraste fotos da gaveta pra cá.</div>
 </div>
@@ -104,10 +127,15 @@
 let photos = [], extras = [], agenda = [];
 let posted = new Set(), usage = {}, generatedAt = null;
 let isHosted = false;
+let viewMode = 'list';       // 'list' | 'cal'
+let calMonth = new Date();
 
 const REPO_OWNER = 'orlandolovecapture-ops';
 const REPO_NAME = 'cura-poster';
 const PAT_KEY = 'cp_pat';
+const PRICE_KEY = 'cp_price';
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DOW = ['D','S','T','Q','Q','S','S'];
 
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $ = id => document.getElementById(id);
@@ -140,11 +168,27 @@ async function ghPut(path, obj, sha, msg){
   return r.json();
 }
 
-// ---------------- tokens ----------------
+// ---------------- custo em reais ----------------
+function priceCfg(){
+  try { return JSON.parse(localStorage.getItem(PRICE_KEY)) || {}; } catch(e){ return {}; }
+}
+function monthCost(){
+  const m = new Date().toISOString().slice(0,7);
+  const u = usage[m]; if (!u) return null;
+  const c = priceCfg();
+  const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
+  const input = u.input ?? Math.round((u.tokens||0) * 0.6);
+  const output = u.output ?? Math.round((u.tokens||0) * 0.4);
+  const usd = (input/1e6)*inP + (output/1e6)*outP;
+  return usd * brl;
+}
 function renderTokens(){
   const m = new Date().toISOString().slice(0,7);
   const u = usage[m];
-  $('tokens').innerHTML = u ? `tokens este mês: <b>${u.tokens.toLocaleString('pt-BR')}</b>` : 'tokens este mês: <b>0</b>';
+  const tok = u ? (u.tokens||0) : 0;
+  const cost = monthCost();
+  const cstr = cost != null ? 'R$ ' + cost.toFixed(2).replace('.', ',') : 'R$ 0,00';
+  $('tokens').innerHTML = `${cstr} · <b>${tok.toLocaleString('pt-BR')}</b> tok`;
 }
 
 // ---------------- datas ----------------
@@ -169,8 +213,7 @@ function pill(p){
   if (p.status === 'approved') return '<span class="pill ok">aprovada</span>';
   return '';
 }
-function render(){
-  renderTokens();
+function renderList(){
   $('agenda').innerHTML = agenda.map((a,i) => {
     const p = photoByKey(a.image_key); if (!p) return '';
     const past = new Date(a.scheduled_at) < new Date();
@@ -182,8 +225,45 @@ function render(){
         <div class="meta">${pill(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
       </div></div>`;
   }).join('');
+}
+function renderCal(){
+  const y = calMonth.getFullYear(), mo = calMonth.getMonth();
+  const first = new Date(y, mo, 1);
+  const days = new Date(y, mo+1, 0).getDate();
+  const off = first.getDay();
+  const byDay = {};
+  agenda.forEach(a => {
+    const d = new Date(a.scheduled_at);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    (byDay[key] = byDay[key] || []).push(a);
+  });
+  let h = `<div class="cal-nav"><button id="cal-prev">‹</button><span class="mnth">${MONTHS[mo]} ${y}</span><button id="cal-next">›</button></div><div class="cal-grid">`;
+  DOW.forEach(d => h += `<div class="cal-dow">${d}</div>`);
+  for (let i=0;i<off;i++) h += `<div class="cal-day empty"></div>`;
+  const today = new Date();
+  for (let day=1; day<=days; day++){
+    const key = `${y}-${mo}-${day}`;
+    const items = byDay[key] || [];
+    const isToday = today.getFullYear()===y && today.getMonth()===mo && today.getDate()===day;
+    h += `<div class="cal-day ${isToday?'today':''}"><div class="dnum">${day}</div>`;
+    items.forEach(a => {
+      const p = photoByKey(a.image_key); if (!p) return;
+      h += `<div class="cal-item" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+    });
+    h += `</div>`;
+  }
+  h += `</div>`;
+  $('agenda').innerHTML = h;
+  $('cal-prev').onclick = () => { calMonth = new Date(y, mo-1, 1); render(); };
+  $('cal-next').onclick = () => { calMonth = new Date(y, mo+1, 1); render(); };
+}
+function render(){
+  renderTokens();
+  if (viewMode === 'cal') renderCal(); else renderList();
   $('agenda-n').textContent = agenda.length;
   $('agenda-empty').style.display = agenda.length ? 'none' : 'block';
+  $('view-list').classList.toggle('on', viewMode === 'list');
+  $('view-cal').classList.toggle('on', viewMode === 'cal');
 
   const gav = photos.filter(p => !inAgenda(p.image_key));
   $('gaveta').innerHTML = gav.map(p => `
@@ -194,6 +274,8 @@ function render(){
   $('gaveta-n').textContent = gav.length;
   $('gaveta-empty').style.display = gav.length ? 'none' : 'block';
 }
+$('view-list').addEventListener('click', () => { viewMode='list'; render(); });
+$('view-cal').addEventListener('click', () => { viewMode='cal'; render(); });
 
 // ---------------- drag & drop ----------------
 let dragKey = null;
@@ -230,7 +312,10 @@ gavetaEl.addEventListener('drop', e => {
 });
 
 // ---------------- clique ----------------
-document.addEventListener('click', e => { const c = e.target.closest('.acard, .cell'); if (c) openSheet(c.dataset.k); });
+document.addEventListener('click', e => {
+  const c = e.target.closest('.acard, .cell, .cal-item');
+  if (c) openSheet(c.dataset.k);
+});
 
 let curKey = null;
 function openSheet(k){
@@ -317,22 +402,35 @@ async function persist(msg){
   } catch(e){ toast('Erro ao salvar: ' + e.message, true); }
 }
 
-// ---------------- configurações (PAT) ----------------
+// ---------------- configurações ----------------
 function openSettings(){
+  const pc = priceCfg();
   $('settings-sheet').innerHTML = `
-    <div class="label">Chave de acesso (token)</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Para salvar na nuvem, cole um <b>personal access token</b> do GitHub com acesso ao repositório <b>${REPO_OWNER}/${REPO_NAME}</b> (permissão Contents: Read &amp; Write).</p>
+    <div class="label">Chave de acesso (token do GitHub)</div>
+    <p class="help">Cole um <b>personal access token</b> com acesso ao repositório <b>${REPO_OWNER}/${REPO_NAME}</b> (permissão <b>Contents: Read &amp; Write</b>).</p>
     <input id="pat-input" type="password" placeholder="github_pat_..." value="${esc(pat())}">
+
+    <div class="label">Preço do Gemini (USD por 1 milhão de tokens)</div>
+    <p class="help">Padrão estimado: entrada 0,15 · saída 0,60. Ajuste conforme a tabela atual do Google.</p>
+    <input id="price-in" type="number" step="0.01" min="0" placeholder="entrada (ex: 0.15)" value="${pc.input ?? 0.15}">
+    <div style="height:6px"></div>
+    <input id="price-out" type="number" step="0.01" min="0" placeholder="saída (ex: 0.60)" value="${pc.output ?? 0.60}">
+    <div class="label">Cotação do dólar (USD → BRL)</div>
+    <input id="price-brl" type="number" step="0.01" min="0" placeholder="ex: 5.50" value="${pc.usd_brl ?? 5.5}">
+
     <div class="row">
       <button class="btn ghost" data-a="cancel">Cancelar</button>
-      <button class="btn primary" data-a="savepat" style="flex:2">Salvar chave</button>
+      <button class="btn primary" data-a="savecfg" style="flex:2">Salvar</button>
     </div>
   `;
   $('settings-overlay').classList.add('open');
-  $('settings-sheet').querySelector('[data-a="savepat"]').addEventListener('click', () => {
-    localStorage.setItem(PAT_KEY, $('pat-input').value.trim());
+  $('settings-sheet').querySelector('[data-a="savecfg"]').addEventListener('click', () => {
+    const p = $('pat-input').value.trim();
+    if (p) localStorage.setItem(PAT_KEY, p);
+    localStorage.setItem(PRICE_KEY, JSON.stringify({ input: +$('price-in').value, output: +$('price-out').value, usd_brl: +$('price-brl').value }));
     $('settings-overlay').classList.remove('open');
-    toast('Chave salva ✓'); loadRemote();
+    toast('Configurações salvas ✓'); render();
+    if (isHosted && pat()) loadRemote();
   });
   $('settings-sheet').querySelector('[data-a="cancel"]').addEventListener('click', () => $('settings-overlay').classList.remove('open'));
 }
@@ -353,7 +451,6 @@ async function loadRemote(){
 (function init(){
   const raw = document.getElementById('data').textContent.trim();
   if (raw && raw !== 'null' && raw !== '{}'){
-    // preview: dados embutidos
     const D = JSON.parse(raw);
     photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || [];
     posted = new Set(D.posted || []); usage = D.usage || {};
