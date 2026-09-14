@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cura Poster</title>
+<style>
+  :root {
+    --bg: #0f0f12; --card: #1a1a20; --border: #2a2a33;
+    --text: #f0eef4; --muted: #9a97a6;
+    --accent: #e86a8a; --accent2: #6a8ae8;
+    --green: #34c98e; --red: #e05656; --amber: #e8a33d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; padding-bottom: 40px; }
+  header { position: sticky; top: 0; z-index: 30; background: rgba(15,15,18,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+  header .top { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  header .tokens { margin-left: auto; font-size: 11px; color: var(--muted); background: var(--card); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+  header .tokens b { color: var(--text); }
+  header .gear { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
+  .hint { padding: 8px 14px; font-size: 12px; color: var(--muted); }
+
+  .section { padding: 14px 16px 4px; }
+  .section .stitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .section .stitle .n { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; font-size: 11px; }
+
+  .agenda { display: flex; flex-direction: column; gap: 8px; }
+  .agenda.drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 12px; }
+  .acard { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: grab; }
+  .acard.dragging { opacity: 0.4; }
+  .acard .thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; background: #222; }
+  .acard .info { flex: 1; min-width: 0; }
+  .acard .info .cap { font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .acard .info .meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .acard .num { font-weight: 800; color: var(--muted); font-size: 15px; width: 18px; text-align: center; flex: none; }
+  .acard .grip { color: var(--muted); font-size: 16px; flex: none; }
+  .pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+  .pill.ok { background: var(--green); color: #05210f; }
+  .pill.no { background: var(--red); color: #fff; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .grid.drop { outline: 2px dashed var(--accent2); outline-offset: 4px; border-radius: 12px; }
+  .cell { position: relative; aspect-ratio: 1/1; overflow: hidden; cursor: grab; background: var(--card); }
+  .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cell.dim img { opacity: .35; filter: grayscale(.7); }
+  .cell .p { position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+
+  .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 50; display: none; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .sheet { background: var(--bg); border: 1px solid var(--border); border-bottom: 0; border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; padding: 16px; animation: up .22s ease; }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheet .photo { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); }
+  .sheet .label { font-size: 11px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  .sheet textarea, .sheet input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; font-family: inherit; }
+  .sheet textarea { resize: vertical; }
+  .sheet .count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 3px; }
+  .btn { border: 0; border-radius: 10px; padding: 11px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; }
+  .btn.ok { background: var(--green); color: #05210f; }
+  .btn.no { background: var(--red); }
+  .btn.swap { background: var(--accent2); }
+  .btn.ghost { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+  .btn.primary { background: var(--accent); }
+  .btn.sm { padding: 8px 10px; font-size: 12px; }
+  .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .row .btn { flex: 1; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--green); color: #05210f; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 24px; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--red); color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Cura Poster</h1>
+    <div class="tokens" id="tokens">—</div>
+    <button class="gear" id="gear" title="Configurar">⚙️</button>
+  </div>
+  <div class="hint" id="hint">Arraste para reordenar ou tirar da agenda. Toque numa foto para editar.</div>
+</header>
+
+<div class="section">
+  <div class="stitle">📅 Agenda <span class="n" id="agenda-n">0</span></div>
+  <div class="agenda" id="agenda"></div>
+  <div class="empty" id="agenda-empty" style="display:none">Agenda vazia — arraste fotos da gaveta pra cá.</div>
+</div>
+
+<div class="section">
+  <div class="stitle">🗂️ Gaveta <span class="n" id="gaveta-n">0</span></div>
+  <div class="grid" id="gaveta"></div>
+  <div class="empty" id="gaveta-empty" style="display:none">Gaveta vazia.</div>
+</div>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
+<div class="toast" id="toast">Salvo</div>
+
+<script type="application/json" id="data">null</script>
+
+<script>
+// ---------------- estado ----------------
+let photos = [], extras = [], agenda = [];
+let posted = new Set(), usage = {}, generatedAt = null;
+let isHosted = false;
+
+const REPO_OWNER = 'orlandolovecapture-ops';
+const REPO_NAME = 'cura-poster';
+const PAT_KEY = 'cp_pat';
+
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = id => document.getElementById(id);
+const toast = (m, err) => { const t = $('toast'); t.textContent = m; t.classList.toggle('err', !!err); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); };
+
+function photoByKey(k){ return [...photos, ...extras].find(p => p.image_key === k); }
+function inAgenda(k){ return agenda.some(a => a.image_key === k); }
+
+// ---------------- GitHub API ----------------
+function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+function b64d(s){ return decodeURIComponent(escape(atob(s))); }
+function pat(){ return localStorage.getItem(PAT_KEY) || ''; }
+
+async function ghGet(path){
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+    headers: { Authorization: `Bearer ${pat()}`, Accept: 'application/vnd.github+json' }
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  const j = await r.json();
+  return { data: JSON.parse(b64d(j.content)), sha: j.sha };
+}
+async function ghPut(path, obj, sha, msg){
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${pat()}`, Accept: 'application/vnd.github+json' },
+    body: JSON.stringify({ message: msg || 'edição pelo app', content: b64e(JSON.stringify(obj, null, 2)), sha })
+  });
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+// ---------------- tokens ----------------
+function renderTokens(){
+  const m = new Date().toISOString().slice(0,7);
+  const u = usage[m];
+  $('tokens').innerHTML = u ? `tokens este mês: <b>${u.tokens.toLocaleString('pt-BR')}</b>` : 'tokens este mês: <b>0</b>';
+}
+
+// ---------------- datas ----------------
+function fmt(s){ if(!s) return '—'; const d = new Date(s); return d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
+function toLocalInput(s){ const d = new Date(s); const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fromLocalInput(v){ return v ? new Date(v).toISOString() : null; }
+function nextFreeSlot(){
+  let base = new Date();
+  const last = agenda.map(a=>new Date(a.scheduled_at)).filter(d=>!isNaN(d)).sort((a,b)=>b-a)[0];
+  if (last > base) base = last;
+  for (let d=0; d<60; d++) for (const [h,m] of [[9,0],[18,0]]){
+    const cand = new Date(base); cand.setDate(cand.getDate()+d); cand.setHours(h,m,0,0);
+    if (cand > new Date()) return cand.toISOString();
+  }
+  return new Date(Date.now()+86400000).toISOString();
+}
+
+// ---------------- render ----------------
+function pill(p){
+  if (posted.has(p.image_key)) return '<span class="pill ok">publicada</span>';
+  if (p.status === 'rejected') return '<span class="pill no">recusada</span>';
+  if (p.status === 'approved') return '<span class="pill ok">aprovada</span>';
+  return '';
+}
+function render(){
+  renderTokens();
+  $('agenda').innerHTML = agenda.map((a,i) => {
+    const p = photoByKey(a.image_key); if (!p) return '';
+    const past = new Date(a.scheduled_at) < new Date();
+    return `<div class="acard" draggable="true" data-k="${esc(a.image_key)}">
+      <span class="grip">⠿</span><span class="num">${i+1}</span>
+      <img class="thumb" src="${esc(p.url)}" alt="">
+      <div class="info">
+        <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
+        <div class="meta">${pill(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
+      </div></div>`;
+  }).join('');
+  $('agenda-n').textContent = agenda.length;
+  $('agenda-empty').style.display = agenda.length ? 'none' : 'block';
+
+  const gav = photos.filter(p => !inAgenda(p.image_key));
+  $('gaveta').innerHTML = gav.map(p => `
+    <div class="cell ${p.status==='rejected'?'dim':''}" draggable="true" data-k="${esc(p.image_key)}">
+      <img loading="lazy" src="${esc(p.url)}" alt="">
+      ${posted.has(p.image_key)?'<span class="p pill ok">✓</span>':(p.status==='rejected'?'<span class="p pill no">✗</span>':'')}
+    </div>`).join('');
+  $('gaveta-n').textContent = gav.length;
+  $('gaveta-empty').style.display = gav.length ? 'none' : 'block';
+}
+
+// ---------------- drag & drop ----------------
+let dragKey = null;
+document.addEventListener('dragstart', e => { const el = e.target.closest('[draggable="true"]'); if (el){ dragKey = el.dataset.k; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain', dragKey);}catch(_){} } });
+document.addEventListener('dragend', () => { dragKey = null; $('agenda').classList.remove('drop'); $('gaveta').classList.remove('drop'); });
+
+const agendaEl = $('agenda');
+agendaEl.addEventListener('dragover', e => { e.preventDefault(); agendaEl.classList.add('drop'); });
+agendaEl.addEventListener('dragleave', () => agendaEl.classList.remove('drop'));
+agendaEl.addEventListener('drop', e => {
+  e.preventDefault(); agendaEl.classList.remove('drop');
+  const k = dragKey || e.dataTransfer.getData('text/plain'); if (!k) return;
+  const target = e.target.closest('.acard');
+  if (inAgenda(k)){
+    const from = agenda.findIndex(a => a.image_key === k);
+    let to = target ? agenda.findIndex(a => a.image_key === target.dataset.k) : agenda.length - 1;
+    if (from < 0) return;
+    const [item] = agenda.splice(from, 1); agenda.splice(to, 0, item);
+  } else {
+    const item = { image_key: k, scheduled_at: nextFreeSlot() };
+    if (target){ const to = agenda.findIndex(a => a.image_key === target.dataset.k); agenda.splice(to, 0, item); }
+    else agenda.push(item);
+  }
+  render(); persist('reordenado');
+});
+
+const gavetaEl = $('gaveta');
+gavetaEl.addEventListener('dragover', e => { e.preventDefault(); gavetaEl.classList.add('drop'); });
+gavetaEl.addEventListener('dragleave', () => gavetaEl.classList.remove('drop'));
+gavetaEl.addEventListener('drop', e => {
+  e.preventDefault(); gavetaEl.classList.remove('drop');
+  const k = dragKey || e.dataTransfer.getData('text/plain');
+  if (k && inAgenda(k)){ agenda = agenda.filter(a => a.image_key !== k); render(); persist('voltou pra gaveta'); }
+});
+
+// ---------------- clique ----------------
+document.addEventListener('click', e => { const c = e.target.closest('.acard, .cell'); if (c) openSheet(c.dataset.k); });
+
+let curKey = null;
+function openSheet(k){
+  curKey = k;
+  const p = photoByKey(k);
+  const ag = agenda.find(a => a.image_key === k);
+  const isScheduled = !!ag;
+  $('sheet').innerHTML = `
+    <img class="photo" src="${esc(p.url)}" alt="">
+    <div class="row">
+      <button class="btn ok" data-a="approve">✓ Aprovar</button>
+      <button class="btn no" data-a="reject">✗ Recusar</button>
+      <button class="btn swap" data-a="swap">🔄 Trocar foto</button>
+    </div>
+    ${isScheduled ? `
+    <div class="label">Data e hora do post</div>
+    <input type="datetime-local" id="sched" value="${toLocalInput(ag.scheduled_at)}">
+    <div class="row">
+      <button class="btn ghost sm" data-a="up">← Cima</button>
+      <button class="btn ghost sm" data-a="down">Baixo →</button>
+      <button class="btn ghost sm" data-a="unschedule">Tirar da agenda</button>
+    </div>` : `
+    <div class="row"><button class="btn primary" data-a="schedule">📅 Agendar</button></div>`}
+    <div class="label">Legenda</div>
+    <textarea id="cap" rows="4">${esc(p.caption)}</textarea>
+    <div class="count" id="capcount"></div>
+    <div class="label">Hashtags (separadas por espaço)</div>
+    <textarea id="tags" rows="2">${esc((p.hashtags||[]).join(' '))}</textarea>
+    <div class="label">Taguear pessoas (@usuario, vírgula)</div>
+    <input id="usertags" placeholder="@noiva, @noivo" value="${esc((p.user_tags||[]).join(', '))}">
+    <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
+  `;
+  $('overlay').classList.add('open');
+  const cap = $('cap'); const cnt = () => $('capcount').textContent = cap.value.length + ' / 2200';
+  cap.addEventListener('input', cnt); cnt();
+  $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a)));
+}
+
+function act(a){
+  const p = photoByKey(curKey); if (!p) return;
+  if (a === 'approve') p.status = 'approved';
+  else if (a === 'reject') p.status = 'rejected';
+  else if (a === 'swap'){ swap(curKey); return; }
+  else if (a === 'schedule'){ agenda.push({image_key: curKey, scheduled_at: nextFreeSlot()}); }
+  else if (a === 'unschedule'){ agenda = agenda.filter(x => x.image_key !== curKey); }
+  else if (a === 'up' || a === 'down'){
+    const i = agenda.findIndex(x => x.image_key === curKey);
+    const j = a === 'up' ? i-1 : i+1;
+    if (i >= 0 && j >= 0 && j < agenda.length){ [agenda[i], agenda[j]] = [agenda[j], agenda[i]]; }
+  }
+  else if (a === 'save'){
+    p.caption = $('cap').value.trim();
+    const t = $('tags').value.trim(); p.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
+    const ut = $('usertags').value.trim();
+    p.user_tags = ut ? ut.split(',').map(s => s.trim().replace(/^@/,'')).filter(Boolean).map(s => '@'+s) : [];
+    const s = $('sched'); if (s){ const ag = agenda.find(x => x.image_key === curKey); if (ag) ag.scheduled_at = fromLocalInput(s.value) || ag.scheduled_at; }
+  }
+  if (a === 'save'){ closeSheet(); render(); persist('legenda editada'); }
+  else { closeSheet(); render(); persist('atualizado'); }
+}
+
+function swap(k){
+  const p = photoByKey(k);
+  if (!extras.length){ toast('Sem reservas ainda', true); return; }
+  const e = extras.shift();
+  Object.assign(p, { image_key: e.image_key, title: e.title, url: e.url, caption: e.caption, hashtags: e.hashtags, user_tags: [] });
+  agenda.forEach(a => { if (a.image_key === k) a.image_key = e.image_key; });
+  extras.push(e);
+  closeSheet(); render(); persist('foto trocada');
+}
+
+function closeSheet(){ $('overlay').classList.remove('open'); curKey = null; }
+$('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeSheet(); });
+
+// ---------------- persistência ----------------
+async function persist(msg){
+  if (!isHosted){ toast(msg + ' (preview)'); return; }
+  if (!pat()){ openSettings(); return; }
+  try {
+    const cur = await ghGet('state/queue.json');
+    const obj = { generated_at: cur ? cur.data.generated_at : generatedAt, photos, extras, agenda };
+    await ghPut('state/queue.json', obj, cur ? cur.sha : undefined, msg || 'edição pelo app');
+    toast('Salvo na nuvem ✓');
+  } catch(e){ toast('Erro ao salvar: ' + e.message, true); }
+}
+
+// ---------------- configurações (PAT) ----------------
+function openSettings(){
+  $('settings-sheet').innerHTML = `
+    <div class="label">Chave de acesso (token)</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Para salvar na nuvem, cole um <b>personal access token</b> do GitHub com acesso ao repositório <b>${REPO_OWNER}/${REPO_NAME}</b> (permissão Contents: Read &amp; Write).</p>
+    <input id="pat-input" type="password" placeholder="github_pat_..." value="${esc(pat())}">
+    <div class="row">
+      <button class="btn ghost" data-a="cancel">Cancelar</button>
+      <button class="btn primary" data-a="savepat" style="flex:2">Salvar chave</button>
+    </div>
+  `;
+  $('settings-overlay').classList.add('open');
+  $('settings-sheet').querySelector('[data-a="savepat"]').addEventListener('click', () => {
+    localStorage.setItem(PAT_KEY, $('pat-input').value.trim());
+    $('settings-overlay').classList.remove('open');
+    toast('Chave salva ✓'); loadRemote();
+  });
+  $('settings-sheet').querySelector('[data-a="cancel"]').addEventListener('click', () => $('settings-overlay').classList.remove('open'));
+}
+$('gear').addEventListener('click', openSettings);
+$('settings-overlay').addEventListener('click', e => { if (e.target.id === 'settings-overlay') $('settings-overlay').classList.remove('open'); });
+
+// ---------------- carregamento ----------------
+async function loadRemote(){
+  try {
+    const [q, p, u] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json')]);
+    if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; generatedAt = q.data.generated_at; }
+    if (p){ posted = new Set(Object.keys(p.data.posted || {})); }
+    if (u){ usage = u.data; }
+    render();
+  } catch(e){ toast('Erro ao carregar: ' + e.message, true); }
+}
+
+(function init(){
+  const raw = document.getElementById('data').textContent.trim();
+  if (raw && raw !== 'null' && raw !== '{}'){
+    // preview: dados embutidos
+    const D = JSON.parse(raw);
+    photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || [];
+    posted = new Set(D.posted || []); usage = D.usage || {};
+    render();
+  } else {
+    isHosted = true;
+    if (pat()) loadRemote(); else openSettings();
+  }
+})();
+</script>
+</body>
+</html>
