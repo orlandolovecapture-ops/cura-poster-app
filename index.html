@@ -157,7 +157,8 @@
 <button id="simone-fab" title="Falar com a Simone">💬</button>
 <div class="sel-bar" id="sel-bar">
   <span id="sel-count" style="font-size:13px">0 selecionadas</span>
-  <button class="btn primary sm" id="sel-simone">Pedir pra Simone</button>
+  <button class="btn primary sm" id="sel-car">Criar Carrossel ▦</button>
+  <button class="btn ghost sm" id="sel-simone">Pedir pra Simone</button>
   <button class="btn ghost sm" id="sel-clear">Limpar</button>
 </div>
 
@@ -422,7 +423,42 @@ document.addEventListener('click', e => {
   else if (cell.dataset.k) openSheet(cell.dataset.k);
 });
 
-// ---------------- seleção ----------------
+// ---------------- swipe para excluir na agenda ----------------
+document.addEventListener('touchstart', e => {
+  const card = e.target.closest('.acard');
+  if (!card) return;
+  card._startX = e.touches[0].clientX;
+  card._currentX = card._startX;
+}, {passive: true});
+
+document.addEventListener('touchmove', e => {
+  const card = e.target.closest('.acard');
+  if (!card || card._startX === undefined) return;
+  card._currentX = e.touches[0].clientX;
+  const diff = card._currentX - card._startX;
+  if (diff < 0 && diff > -120){
+    card.style.transform = `translateX(${diff}px)`;
+    card.style.transition = 'none';
+  }
+}, {passive: true});
+
+document.addEventListener('touchend', e => {
+  const card = e.target.closest('.acard');
+  if (!card || card._startX === undefined) return;
+  const diff = (card._currentX || card._startX) - card._startX;
+  card.style.transition = 'transform .2s ease';
+  card.style.transform = '';
+  if (diff < -70){
+    const aid = card.dataset.cid || card.dataset.k;
+    if (aid){
+      agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
+      render(); persist('removido da agenda');
+      toast('Post removido da agenda');
+    }
+  }
+  delete card._startX;
+  delete card._currentX;
+});
 function renderSelBar(){
   $('sel-count').textContent = `${selection.size} selecionada${selection.size===1?'':'s'}`;
   $('sel-bar').classList.toggle('show', selection.size > 0 || selectMode);
@@ -434,6 +470,34 @@ $('sel-btn').addEventListener('click', () => {
   render(); renderSelBar();
 });
 $('sel-clear').addEventListener('click', () => { selection.clear(); render(); renderSelBar(); });
+$('sel-car').addEventListener('click', () => {
+  if (!selection.size){ toast('Selecione fotos primeiro (☑️)', true); return; }
+  const keys = [...selection];
+  const urls = keys.map(k => {
+    const p = photoByKey(k);
+    return p ? p.url : '';
+  }).filter(Boolean);
+  if (!urls.length){ toast('Nenhuma foto válida selecionada', true); return; }
+  const first = photoByKey(keys[0]);
+  const couple = first ? (first.couple || first.title || 'Carrossel') : 'Carrossel';
+  const c = {
+    id: 'car_' + Date.now(),
+    title: couple,
+    couple: couple,
+    image_keys: keys,
+    urls: urls,
+    caption: 'Momentos especiais! ✨',
+    hashtags: ['#casamento', '#noivas', '#fotografodecasamento'],
+    status: 'pending',
+    user_tags: [],
+  };
+  carousels.push(c);
+  agenda.push({ kind: 'carousel', carousel_id: c.id, scheduled_at: nextFreeSlot() });
+  selection.clear(); selectMode = false; $('sel-btn').style.color = '';
+  render(); renderSelBar(); persist('carrossel criado');
+  toast('Carrossel criado com sucesso! ▦');
+});
+
 $('sel-simone').addEventListener('click', () => {
   if (!selection.size){ toast('Selecione fotos primeiro (☑️)', true); return; }
   openSimone();
