@@ -103,6 +103,15 @@
   .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--green); color: #05210f; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 24px; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .25s; }
   .toast.show { opacity: 1; }
   .toast.err { background: var(--red); color: #fff; }
+
+  .sel-bar { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 8px 14px; display: none; gap: 10px; align-items: center; z-index: 55; }
+  .sel-bar.show { display: flex; }
+  .cell.sel { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .cell.sel::after { content: '✓'; position: absolute; top: 6px; left: 6px; background: var(--accent); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .htable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .htable th, .htable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .htable th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .htable td.r { text-align: right; }
 </style>
 </head>
 <body>
@@ -110,6 +119,8 @@
   <div class="top">
     <h1>Cura Poster</h1>
     <div class="tokens" id="tokens">—</div>
+    <button class="gear" id="sel-btn" title="Selecionar fotos">☑️</button>
+    <button class="gear" id="hist-btn" title="Histórico de gastos">💰</button>
     <button class="gear" id="gear" title="Configurar">⚙️</button>
   </div>
   <div class="hint" id="hint">Arraste para reordenar. Toque numa foto para editar. Use o botão rosa pra falar com a Simone.</div>
@@ -133,10 +144,16 @@
 </div>
 
 <button id="simone-fab" title="Falar com a Simone">💬</button>
+<div class="sel-bar" id="sel-bar">
+  <span id="sel-count" style="font-size:13px">0 selecionadas</span>
+  <button class="btn primary sm" id="sel-simone">Pedir pra Simone</button>
+  <button class="btn ghost sm" id="sel-clear">Limpar</button>
+</div>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
 <div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet"></div></div>
+<div class="overlay" id="hist-overlay"><div class="sheet" id="hist-sheet"></div></div>
 <div class="toast" id="toast">Salvo</div>
 
 <script type="application/json" id="data">null</script>
@@ -346,12 +363,62 @@ gavetaEl.addEventListener('drop', e => {
 });
 
 // ---------------- clique ----------------
+let selectMode = false, selection = new Set();
 document.addEventListener('click', e => {
   const cell = e.target.closest('.acard, .cell, .cal-item');
   if (!cell) return;
+  if (selectMode){
+    const k = cell.dataset.k;
+    if (k){ selection.has(k) ? selection.delete(k) : selection.add(k); render(); renderSelBar(); }
+    return;
+  }
   if (cell.dataset.cid) openCarSheet(cell.dataset.cid);
   else if (cell.dataset.k) openSheet(cell.dataset.k);
 });
+
+// ---------------- seleção ----------------
+function renderSelBar(){
+  $('sel-count').textContent = `${selection.size} selecionada${selection.size===1?'':'s'}`;
+  $('sel-bar').classList.toggle('show', selection.size > 0 || selectMode);
+}
+$('sel-btn').addEventListener('click', () => {
+  selectMode = !selectMode;
+  if (!selectMode) selection.clear();
+  $('sel-btn').style.color = selectMode ? 'var(--accent)' : '';
+  render(); renderSelBar();
+});
+$('sel-clear').addEventListener('click', () => { selection.clear(); render(); renderSelBar(); });
+$('sel-simone').addEventListener('click', () => {
+  if (!selection.size){ toast('Selecione fotos primeiro (☑️)', true); return; }
+  openSimone();
+  $('simone-input').placeholder = `${selection.size} fotos selecionadas — escreva o pedido...`;
+  $('simone-input').focus();
+});
+
+// ---------------- histórico de gastos ----------------
+function renderHistory(){
+  const months = Object.keys(usage).sort().reverse();
+  const c = priceCfg();
+  const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
+  const rows = months.map(m => {
+    const u = usage[m];
+    const input = u.input ?? Math.round((u.tokens||0)*0.6);
+    const output = u.output ?? Math.round((u.tokens||0)*0.4);
+    const usd = (input/1e6)*inP + (output/1e6)*outP;
+    const r$ = (usd*brl).toFixed(2).replace('.',',');
+    return `<tr><td>${m}</td><td class="r">${input.toLocaleString('pt-BR')}</td><td class="r">${output.toLocaleString('pt-BR')}</td><td class="r">${(u.tokens||0).toLocaleString('pt-BR')}</td><td class="r">${u.calls||0}</td><td class="r"><b>R$ ${r$}</b></td></tr>`;
+  }).join('');
+  $('hist-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💰 Histórico de gastos</div>
+    <p class="help">Token = unidade de texto+imagem que a IA processa. <b>Postar não gasta token</b> (o robô só publica). Gasta quando a IA <b>olha fotos</b> (entrada) e <b>escreve</b> (saída).</p>
+    <table class="htable"><thead><tr><th>Mês</th><th class="r">Entrada</th><th class="r">Saída</th><th class="r">Total</th><th class="r">Chamadas</th><th class="r">Custo</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Sem dados ainda.</td></tr>'}</tbody></table>
+    <div class="row"><button class="btn ghost" data-a="close" style="flex:1">Fechar</button></div>
+  `;
+  $('hist-overlay').classList.add('open');
+  $('hist-sheet').querySelector('[data-a="close"]').addEventListener('click', () => $('hist-overlay').classList.remove('open'));
+}
+$('hist-btn').addEventListener('click', renderHistory);
+$('hist-overlay').addEventListener('click', e => { if (e.target.id === 'hist-overlay') $('hist-overlay').classList.remove('open'); });
 
 let curKey = null, curCid = null;
 function openSheet(k){
@@ -543,7 +610,8 @@ async function sendSimone(text){
   if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
   try {
     const cur = await ghGet('state/simone_request.json');
-    await ghPut('state/simone_request.json', { request: text, at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
+    await ghPut('state/simone_request.json', { request: text, image_keys: [...selection], at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
+    selection.clear(); renderSelBar();
     let before = null;
     try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
     addChat('simone', '…');
