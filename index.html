@@ -112,6 +112,9 @@
   .htable th, .htable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
   .htable th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
   .htable td.r { text-align: right; }
+  .blist { margin: 0 0 10px; padding-left: 18px; }
+  .blist li { margin: 4px 0; font-size: 13px; }
+  .chip { display: inline-block; background: var(--border); padding: 3px 8px; border-radius: 12px; font-size: 11px; margin: 2px; }
 </style>
 </head>
 <body>
@@ -120,6 +123,7 @@
     <h1>Cura Poster</h1>
     <div class="tokens" id="tokens">—</div>
     <button class="gear" id="sel-btn" title="Selecionar fotos">☑️</button>
+    <button class="gear" id="brief-btn" title="Briefing de hoje">💡</button>
     <button class="gear" id="hist-btn" title="Histórico de gastos">💰</button>
     <button class="gear" id="gear" title="Configurar">⚙️</button>
   </div>
@@ -154,12 +158,14 @@
 <div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
 <div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet"></div></div>
 <div class="overlay" id="hist-overlay"><div class="sheet" id="hist-sheet"></div></div>
+<div class="overlay" id="brief-overlay"><div class="sheet" id="brief-sheet"></div></div>
 <div class="toast" id="toast">Salvo</div>
 
 <script type="application/json" id="data">null</script>
 
 <script>
 let photos = [], extras = [], agenda = [], carousels = [];
+let briefing = null, insights = null;
 let posted = new Set(), usage = {}, generatedAt = null;
 let isHosted = false;
 let viewMode = 'list', calMonth = new Date();
@@ -420,6 +426,32 @@ function renderHistory(){
 $('hist-btn').addEventListener('click', renderHistory);
 $('hist-overlay').addEventListener('click', e => { if (e.target.id === 'hist-overlay') $('hist-overlay').classList.remove('open'); });
 
+// ---------------- briefing diário ----------------
+function renderBriefing(){
+  const b = briefing || {};
+  const li = arr => (arr && arr.length) ? arr.map(x => `<li>${esc(x)}</li>`).join('') : '<li class="muted">—</li>';
+  let insHtml = '';
+  if (insights && insights.account && insights.account.length){
+    const acc = {};
+    insights.account.forEach(d => { const v = d.values || []; if (v.length) acc[d.name] = v[v.length-1].value; });
+    const rows = Object.entries(acc).map(([k,v]) => `<span class="chip">${k}: ${v}</span>`).join(' ');
+    if (rows) insHtml = `<div class="label" style="margin-top:10px">📊 Seus números recentes</div><div>${rows}</div>`;
+  }
+  $('brief-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💡 Briefing de hoje</div>
+    ${b.manchete ? `<p class="help" style="font-size:14px">${esc(b.manchete)}</p>` : '<p class="help">Ainda não foi gerado. Ele chega todo dia de madrugada.</p>'}
+    ${b.tendencias ? `<div class="label">🔥 Tendências</div><ul class="blist">${li(b.tendencias)}</ul>` : ''}
+    ${b.dicas ? `<div class="label">✍️ Dicas práticas</div><ul class="blist">${li(b.dicas)}</ul>` : ''}
+    ${b.sugestoes_acervo ? `<div class="label">📸 Do seu acervo</div><ul class="blist">${li(b.sugestoes_acervo)}</ul>` : ''}
+    ${insHtml}
+    <div class="row"><button class="btn ghost" data-a="close" style="flex:1">Fechar</button></div>
+  `;
+  $('brief-overlay').classList.add('open');
+  $('brief-sheet').querySelector('[data-a="close"]').addEventListener('click', () => $('brief-overlay').classList.remove('open'));
+}
+$('brief-btn').addEventListener('click', renderBriefing);
+$('brief-overlay').addEventListener('click', e => { if (e.target.id === 'brief-overlay') $('brief-overlay').classList.remove('open'); });
+
 let curKey = null, curCid = null;
 function openSheet(k){
   curKey = k; curCid = null;
@@ -639,11 +671,13 @@ $('simone-overlay').addEventListener('click', e => { if (e.target.id === 'simone
 // ---------------- carregamento ----------------
 async function loadRemote(){
   try {
-    const [q, p, u, s] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json')]);
+    const [q, p, u, s, b, i] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json'), ghGet('state/briefing.json'), ghGet('state/insights.json')]);
     if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; carousels = q.data.carousels || []; generatedAt = q.data.generated_at; }
     if (p){ posted = new Set(Object.keys(p.data.posted || {})); }
     if (u){ usage = u.data; }
     if (s){ lastSimoneReply = s.data.reply; lastSimoneAt = s.data.at; }
+    if (b){ briefing = b.data; }
+    if (i){ insights = i.data; }
     render();
   } catch(e){ toast('Erro ao carregar: ' + e.message, true); }
 }
