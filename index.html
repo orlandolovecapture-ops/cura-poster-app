@@ -168,7 +168,7 @@
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
-<div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet"></div></div>
+<div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet" style="position:relative"></div></div>
 <div class="overlay" id="hist-overlay"><div class="sheet" id="hist-sheet"></div></div>
 <div class="overlay" id="brief-overlay"><div class="sheet" id="brief-sheet"></div></div>
 <div class="toast" id="toast">Salvo</div>
@@ -886,6 +886,7 @@ $('settings-overlay').addEventListener('click', e => { if (e.target.id === 'sett
 
 function openSimone(){
   $('simone-sheet').innerHTML = `
+    <button onclick="$('simone-overlay').classList.remove('open')" style="position:absolute; right:16px; top:16px; background:none; border:0; color:var(--text); font-size:22px; cursor:pointer">×</button>
     <div class="label" style="margin-top:0">💬 Simone</div>
     <div id="chat" style="max-height:50vh; overflow-y:auto"></div>
     <div class="prog-bar" id="prog-bar" class="${simoneRunning?'active':''}"><div class="fill"></div></div>
@@ -938,7 +939,7 @@ function addChat(who, text){
 }
 async function sendSimone(text){
   addChat('user', text);
-  if (!isHosted){ addChat('simone', '(no preview a Simone não roda — ela funciona no app hospedado)'); return; }
+  // (permitido rodar local e hospedado)
   if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
   simoneRunning = true;
   simoneCancel = false;
@@ -1025,6 +1026,9 @@ async function loadRemote(){
   }
 })();
 </script>
+
+
+
 
 
 <script>
