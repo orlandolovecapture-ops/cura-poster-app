@@ -931,6 +931,7 @@ async function sendSimone(text){
   if (btn){ btn.textContent = 'Parar'; btn.style.background = 'var(--red)'; }
   const prog = $('prog-bar');
   if (prog) prog.classList.add('active');
+
   try {
     const cur = await ghGet('state/simone_request.json');
     await ghPut('state/simone_request.json', { request: text, image_keys: [...selection], at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
@@ -938,31 +939,37 @@ async function sendSimone(text){
     let before = null;
     try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
     addChat('simone', 'Processando em segundo plano...');
-    const thinkEl = $('chat').lastElementChild;
-    for (let i=0; i<60; i++){
-      if (simoneCancel) break;
-      await new Promise(r => setTimeout(r, 5000));
-      if (simoneCancel) break;
-      try {
-        const r = await ghGet('state/simone_reply.json');
-        if (r && r.data.at !== before){
-          if (thinkEl) thinkEl.remove();
-          if (prog) prog.classList.remove('active');
-          if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
-          simoneRunning = false;
-          addChat('simone', r.data.reply);
-          lastSimoneReply = r.data.reply;
-          toast('A Simone concluiu seu pedido! 💬');
-          await loadRemote();
-          return;
-        }
-      } catch(_){}
-    }
-    if (thinkEl) thinkEl.remove();
-    if (prog) prog.classList.remove('active');
-    if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
-    simoneRunning = false;
-    if (!simoneCancel) addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
+    const chatEl = $('chat');
+    const thinkNode = chatEl ? chatEl.lastElementChild : null;
+
+    // Roda em background global
+    (async () => {
+      for (let i=0; i<60; i++){
+        if (simoneCancel) break;
+        await new Promise(r => setTimeout(r, 5000));
+        if (simoneCancel) break;
+        try {
+          const r = await ghGet('state/simone_reply.json');
+          if (r && r.data.at !== before){
+            if (thinkNode && thinkNode.parentNode) thinkNode.remove();
+            const p = $('prog-bar'); if (p) p.classList.remove('active');
+            const b = $('simone-send'); if (b){ b.textContent = 'Enviar'; b.style.background = ''; }
+            simoneRunning = false;
+            addChat('simone', r.data.reply);
+            lastSimoneReply = r.data.reply;
+            toast('A Simone concluiu seu pedido! 💬');
+            await loadRemote();
+            return;
+          }
+        } catch(_){}
+      }
+      if (thinkNode && thinkNode.parentNode) thinkNode.remove();
+      const p = $('prog-bar'); if (p) p.classList.remove('active');
+      const b = $('simone-send'); if (b){ b.textContent = 'Enviar'; b.style.background = ''; }
+      simoneRunning = false;
+      if (!simoneCancel) addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
+    })();
+
   } catch(e){
     if (prog) prog.classList.remove('active');
     if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
