@@ -268,9 +268,9 @@ function renderList(){
       const img2 = c.urls && c.urls[1] ? c.urls[1] : '';
       return `<div class="acard-wrap" data-aid="${esc(id)}">
         <div class="delete-bg">🗑️</div>
-        <div class="acard" draggable="true" data-cid="${esc(c.id)}">
-          <span class="grip">⠿</span><span class="num">${i+1}</span>
-          <span class="stack">${img1?`<img src="${esc(img1)}">`:''}${img2?`<img src="${esc(img2)}">`:''}</span>
+        <div class="acard" data-cid="${esc(c.id)}">
+          <span class="grip" title="Arraste para reordenar" draggable="true">⠿</span><span class="num">${i+1}</span>
+          <span class="stack">${img1?`<img src="${esc(img1)}" draggable="false">`:''}${img2?`<img src="${esc(img2)}" draggable="false">`:''}</span>
           <div class="info">
             <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
             <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
@@ -280,9 +280,9 @@ function renderList(){
     const p = photoByKey(a.image_key); if (!p) return '';
     return `<div class="acard-wrap" data-aid="${esc(id)}">
       <div class="delete-bg">🗑️</div>
-      <div class="acard" draggable="true" data-k="${esc(a.image_key)}">
-        <span class="grip">⠿</span><span class="num">${i+1}</span>
-        <img class="thumb" src="${esc(p.url)}" alt="">
+      <div class="acard" data-k="${esc(a.image_key)}">
+        <span class="grip" title="Arraste para reordenar" draggable="true">⠿</span><span class="num">${i+1}</span>
+        <img class="thumb" src="${esc(p.url)}" alt="" draggable="false">
         <div class="info">
           <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
           <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
@@ -434,6 +434,7 @@ document.addEventListener('click', e => {
 let swipeCard = null, swipeStartX = 0, swipeCurrentX = 0;
 
 function onSwipeStart(clientX, target){
+  if (target.closest('.grip')) return;
   const card = target.closest('.acard');
   if (!card) return;
   swipeCard = card;
