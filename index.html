@@ -420,7 +420,7 @@ document.addEventListener('click', e => {
     return;
   }
   const cell = e.target.closest('.acard, .cell, .cal-item');
-  if (!cell) return;
+  if (!cell || wasSwiped) return;
   if (selectMode){
     const k = cell.dataset.k;
     if (k){ selection.has(k) ? selection.delete(k) : selection.add(k); render(); renderSelBar(); }
@@ -431,7 +431,7 @@ document.addEventListener('click', e => {
 });
 
 // ---------------- swipe para excluir na agenda (estilo Mail iOS/Mac) ----------------
-let swipeCard = null, swipeStartX = 0, swipeCurrentX = 0;
+let swipeCard = null, swipeStartX = 0, swipeCurrentX = 0, wasSwiped = false;
 
 function onSwipeStart(clientX, target){
   if (target.closest('.grip')) return;
@@ -440,6 +440,7 @@ function onSwipeStart(clientX, target){
   swipeCard = card;
   swipeStartX = clientX;
   swipeCurrentX = swipeStartX;
+  wasSwiped = false;
   swipeCard.style.transition = 'none';
 }
 
@@ -447,6 +448,7 @@ function onSwipeMove(clientX, e){
   if (!swipeCard) return;
   swipeCurrentX = clientX;
   const diff = swipeCurrentX - swipeStartX;
+  if (Math.abs(diff) > 8) wasSwiped = true;
   if (diff < 0 && diff > -140){
     if (e && e.cancelable) e.preventDefault();
     swipeCard.style.transform = `translateX(${diff}px)`;
@@ -458,7 +460,7 @@ function onSwipeEnd(){
   const diff = swipeCurrentX - swipeStartX;
   swipeCard.style.transition = 'transform .2s ease';
   swipeCard.style.transform = '';
-  if (diff < -80){
+  if (diff < -70){
     const wrap = swipeCard.closest('.acard-wrap');
     if (wrap){
       const aid = wrap.dataset.aid;
@@ -467,8 +469,25 @@ function onSwipeEnd(){
       toast('Post removido da agenda');
     }
   }
+  setTimeout(() => { wasSwiped = false; }, 100);
   swipeCard = null;
 }
+
+// Suporte a trackpad / Magic Mouse horizontal scroll (wheel)
+document.addEventListener('wheel', e => {
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && e.deltaX < -15){
+    const card = e.target.closest('.acard');
+    if (card){
+      const wrap = card.closest('.acard-wrap');
+      if (wrap){
+        const aid = wrap.dataset.aid;
+        agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
+        render(); persist('removido da agenda');
+        toast('Post removido da agenda');
+      }
+    }
+  }
+}, {passive: true});
 
 document.addEventListener('touchstart', e => onSwipeStart(e.touches[0].clientX, e.target), {passive: true});
 document.addEventListener('touchmove', e => onSwipeMove(e.touches[0].clientX, e), {passive: false});
