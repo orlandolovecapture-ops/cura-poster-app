@@ -866,18 +866,33 @@ $('settings-overlay').addEventListener('click', e => { if (e.target.id === 'sett
 
 // ---------------- Simone ----------------
 let lastSimoneAt = null;
+let simoneRunning = false, simoneCancel = false;
+let chatHistory = [];
+
 function openSimone(){
   $('simone-sheet').innerHTML = `
     <div class="label" style="margin-top:0">💬 Simone</div>
     <div id="chat" style="max-height:50vh; overflow-y:auto"></div>
-    <div class="prog-bar" id="prog-bar"><div class="fill"></div></div>
+    <div class="prog-bar" id="prog-bar" class="${simoneRunning?'active':''}"><div class="fill"></div></div>
     <div class="chat-input">
       <input id="simone-input" placeholder='Ex.: "faça um carrossel do casal Ana e Pedro"'>
-      <button id="simone-send">Enviar</button>
+      <button id="simone-send" style="${simoneRunning?'background:var(--red)':''}">${simoneRunning?'Parar':'Enviar'}</button>
     </div>
   `;
+  if (simoneRunning) $('prog-bar').classList.add('active');
   $('simone-overlay').classList.add('open');
-  let simoneRunning = false, simoneCancel = false;
+
+  // restaura histórico
+  const c = $('chat');
+  if (c){
+    chatHistory.forEach(item => {
+      const d = document.createElement('div');
+      d.className = 'chat-msg ' + (item.who === 'user' ? 'user' : 'simone');
+      d.textContent = item.text;
+      c.appendChild(d);
+    });
+    c.scrollTop = c.scrollHeight;
+  }
 
   $('simone-send').addEventListener('click', () => {
     const btn = $('simone-send');
@@ -894,10 +909,11 @@ function openSimone(){
     if (v){ sendSimone(v); $('simone-input').value = ''; }
   });
   $('simone-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = $('simone-input').value.trim(); if (v){ sendSimone(v); $('simone-input').value = ''; } } });
-  // carrega última resposta se existir
-  if (lastSimoneAt){ addChat('simone', lastSimoneReply || ''); }
 }
+
 function addChat(who, text){
+  chatHistory.push({who, text});
+  if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12); // mantém últimos 6 pares (3 pares principais)
   const c = $('chat'); if (!c) return;
   const d = document.createElement('div');
   d.className = 'chat-msg ' + (who === 'user' ? 'user' : (who === 'simone' ? 'simone' : 'simone thinking'));
