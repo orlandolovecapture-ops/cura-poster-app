@@ -1015,16 +1015,20 @@ async function loadRemote(){
 }
 
 (function init(){
-  const raw = document.getElementById('data').textContent.trim();
-  if (raw && raw !== 'null' && raw !== '{}'){
-    const D = JSON.parse(raw);
-    photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || []; carousels = D.carousels || [];
-    posted = new Set(D.posted || []); usage = D.usage || {};
-    render();
-  } else {
-    isHosted = true;
-    if (pat()) loadRemote(); else openSettings();
+  try {
+    const raw = document.getElementById('data').textContent.trim();
+    if (raw && raw !== 'null' && raw !== '{}'){
+      const D = JSON.parse(raw);
+      photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || []; carousels = D.carousels || [];
+      posted = new Set(D.posted || []); usage = D.usage || {};
+      render();
+      return;
+    }
+  } catch(e){
+    console.error('Erro ao ler dados embutidos:', e);
   }
+  isHosted = true;
+  if (pat()) loadRemote(); else openSettings();
 })();
 </script>
 </body>
