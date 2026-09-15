@@ -166,6 +166,7 @@
 <script>
 let photos = [], extras = [], agenda = [], carousels = [];
 let briefing = null, insights = null;
+let spending = [], analysis = null, insightsInterval = 15;
 let posted = new Set(), usage = {}, generatedAt = null;
 let isHosted = false;
 let viewMode = 'list', calMonth = new Date();
@@ -403,21 +404,20 @@ $('sel-simone').addEventListener('click', () => {
 
 // ---------------- histórico de gastos ----------------
 function renderHistory(){
-  const months = Object.keys(usage).sort().reverse();
   const c = priceCfg();
   const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
-  const rows = months.map(m => {
-    const u = usage[m];
-    const input = u.input ?? Math.round((u.tokens||0)*0.6);
-    const output = u.output ?? Math.round((u.tokens||0)*0.4);
-    const usd = (input/1e6)*inP + (output/1e6)*outP;
-    const r$ = (usd*brl).toFixed(2).replace('.',',');
-    return `<tr><td>${m}</td><td class="r">${input.toLocaleString('pt-BR')}</td><td class="r">${output.toLocaleString('pt-BR')}</td><td class="r">${(u.tokens||0).toLocaleString('pt-BR')}</td><td class="r">${u.calls||0}</td><td class="r"><b>R$ ${r$}</b></td></tr>`;
+  const evts = (spending && spending.events) ? [...spending.events].reverse() : [];
+  const cost = e => 'R$ ' + ((((e.input||0)/1e6)*inP + ((e.output||0)/1e6)*outP) * brl).toFixed(2).replace('.',',');
+  const rows = evts.map(e => {
+    const d = new Date(e.at);
+    const ds = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    return `<tr><td>${ds}</td><td>${esc(e.event)}</td><td class="r">${(e.tokens||0).toLocaleString('pt-BR')}</td><td class="r">${cost(e)}</td></tr>`;
   }).join('');
+  const total = evts.reduce((s,e) => s + ((e.input||0)/1e6)*inP + ((e.output||0)/1e6)*outP, 0);
   $('hist-sheet').innerHTML = `
-    <div class="label" style="margin-top:0">💰 Histórico de gastos</div>
-    <p class="help">Token = unidade de texto+imagem que a IA processa. <b>Postar não gasta token</b> (o robô só publica). Gasta quando a IA <b>olha fotos</b> (entrada) e <b>escreve</b> (saída).</p>
-    <table class="htable"><thead><tr><th>Mês</th><th class="r">Entrada</th><th class="r">Saída</th><th class="r">Total</th><th class="r">Chamadas</th><th class="r">Custo</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Sem dados ainda.</td></tr>'}</tbody></table>
+    <div class="label" style="margin-top:0">💰 Gastos</div>
+    <p class="help">Total: <b>R$ ${(total*brl).toFixed(2).replace('.',',')}</b> nas últimas ${evts.length} ações. <b>Postar é grátis</b> — gasta quando a IA olha fotos e escreve.</p>
+    <table class="htable"><thead><tr><th>Quando</th><th>O quê</th><th class="r">Tokens</th><th class="r">Custo</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Sem gastos ainda.</td></tr>'}</tbody></table>
     <div class="row"><button class="btn ghost" data-a="close" style="flex:1">Fechar</button></div>
   `;
   $('hist-overlay').classList.add('open');
@@ -437,6 +437,16 @@ function renderBriefing(){
     const rows = Object.entries(acc).map(([k,v]) => `<span class="chip">${k}: ${v}</span>`).join(' ');
     if (rows) insHtml = `<div class="label" style="margin-top:10px">📊 Seus números recentes</div><div>${rows}</div>`;
   }
+  let anHtml = '';
+  if (analysis){
+    anHtml = `
+      <div class="label" style="margin-top:12px">🧠 Análise da Simone</div>
+      ${analysis.resumo ? `<p class="help">${esc(analysis.resumo)}</p>` : ''}
+      ${analysis.o_que_funcionou && analysis.o_que_funcionou.length ? `<div class="label">✅ O que funcionou</div><ul class="blist">${li(analysis.o_que_funcionou)}</ul>` : ''}
+      ${analysis.o_que_mudar && analysis.o_que_mudar.length ? `<div class="label">🔄 O que mudar</div><ul class="blist">${li(analysis.o_que_mudar)}</ul>` : ''}
+      ${analysis.proximas_acoes && analysis.proximas_acoes.length ? `<div class="label">👉 Próximas ações</div><ul class="blist">${li(analysis.proximas_acoes)}</ul>` : ''}
+    `;
+  }
   $('brief-sheet').innerHTML = `
     <div class="label" style="margin-top:0">💡 Briefing de hoje</div>
     ${b.manchete ? `<p class="help" style="font-size:14px">${esc(b.manchete)}</p>` : '<p class="help">Ainda não foi gerado. Ele chega todo dia de madrugada.</p>'}
@@ -444,10 +454,23 @@ function renderBriefing(){
     ${b.dicas ? `<div class="label">✍️ Dicas práticas</div><ul class="blist">${li(b.dicas)}</ul>` : ''}
     ${b.sugestoes_acervo ? `<div class="label">📸 Do seu acervo</div><ul class="blist">${li(b.sugestoes_acervo)}</ul>` : ''}
     ${insHtml}
-    <div class="row"><button class="btn ghost" data-a="close" style="flex:1">Fechar</button></div>
+    ${anHtml}
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" data-a="analyze" style="flex:1">🔄 Analisar agora</button>
+      <button class="btn ghost" data-a="close" style="flex:1">Fechar</button>
+    </div>
   `;
   $('brief-overlay').classList.add('open');
   $('brief-sheet').querySelector('[data-a="close"]').addEventListener('click', () => $('brief-overlay').classList.remove('open'));
+  $('brief-sheet').querySelector('[data-a="analyze"]').addEventListener('click', async () => {
+    if (!pat()){ openSettings(); return; }
+    try {
+      const cur = await ghGet('state/analyze_request.json');
+      await ghPut('state/analyze_request.json', { force: true, at: new Date().toISOString() }, cur ? cur.sha : undefined, 'analyze: agora');
+      toast('Análise pedida! Chega em ~1 min. Recarregue pra ver.');
+      $('brief-overlay').classList.remove('open');
+    } catch(e){ toast('Erro ao pedir análise: ' + e.message, true); }
+  });
 }
 $('brief-btn').addEventListener('click', renderBriefing);
 $('brief-overlay').addEventListener('click', e => { if (e.target.id === 'brief-overlay') $('brief-overlay').classList.remove('open'); });
@@ -587,6 +610,9 @@ function openSettings(){
     <input id="price-out" type="number" step="0.01" min="0" placeholder="saída" value="${pc.output ?? 0.60}">
     <div class="label">Cotação USD → BRL</div>
     <input id="price-brl" type="number" step="0.01" min="0" placeholder="ex: 5.50" value="${pc.usd_brl ?? 5.5}">
+    <div class="label">Análise de insights</div>
+    <p class="help">A Simone analisa seus números a cada N dias (padrão 15) e sugere ajustes.</p>
+    <input id="insights-interval" type="number" step="1" min="1" max="90" placeholder="dias" value="${insightsInterval ?? 15}">
     <div class="row">
       <button class="btn ghost" data-a="cancel">Cancelar</button>
       <button class="btn primary" data-a="savecfg" style="flex:2">Salvar</button>
@@ -597,6 +623,13 @@ function openSettings(){
     const p = $('pat-input').value.trim();
     if (p) localStorage.setItem(PAT_KEY, p);
     localStorage.setItem(PRICE_KEY, JSON.stringify({ input: +$('price-in').value, output: +$('price-out').value, usd_brl: +$('price-brl').value }));
+    insightsInterval = Math.max(1, +$('insights-interval').value || 15);
+    (async () => {
+      try {
+        const cur = await ghGet('state/config.json');
+        await ghPut('state/config.json', { insights_interval_days: insightsInterval }, cur ? cur.sha : undefined, 'config: intervalo');
+      } catch(e){}
+    })();
     $('settings-overlay').classList.remove('open');
     toast('Configurações salvas ✓'); render();
     if (isHosted && pat()) loadRemote();
@@ -671,13 +704,16 @@ $('simone-overlay').addEventListener('click', e => { if (e.target.id === 'simone
 // ---------------- carregamento ----------------
 async function loadRemote(){
   try {
-    const [q, p, u, s, b, i] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json'), ghGet('state/briefing.json'), ghGet('state/insights.json')]);
+    const [q, p, u, s, b, i, sp, an, cf] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json'), ghGet('state/briefing.json'), ghGet('state/insights.json'), ghGet('state/spending.json'), ghGet('state/analysis.json'), ghGet('state/config.json')]);
     if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; carousels = q.data.carousels || []; generatedAt = q.data.generated_at; }
     if (p){ posted = new Set(Object.keys(p.data.posted || {})); }
     if (u){ usage = u.data; }
     if (s){ lastSimoneReply = s.data.reply; lastSimoneAt = s.data.at; }
     if (b){ briefing = b.data; }
     if (i){ insights = i.data; }
+    if (sp){ spending = sp.data; }
+    if (an){ analysis = an.data; }
+    if (cf){ insightsInterval = cf.data.insights_interval_days ?? 15; }
     render();
   } catch(e){ toast('Erro ao carregar: ' + e.message, true); }
 }
