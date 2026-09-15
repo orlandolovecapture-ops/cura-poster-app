@@ -520,12 +520,10 @@ function actCar(a){
 }
 
 function swap(k){
-  const p = photoByKey(k);
-  if (!extras.length){ toast('Sem reservas ainda', true); return; }
-  const e = extras.shift();
-  Object.assign(p, { image_key: e.image_key, title: e.title, url: e.url, caption: e.caption, hashtags: e.hashtags, user_tags: [] });
+  const pool = photos.filter(x => x.image_key !== k && !inAgenda(x.image_key));
+  if (!pool.length){ toast('Sem fotos na gaveta pra trocar', true); return; }
+  const e = pool[0];
   agenda.forEach(a => { if (a.image_key === k) a.image_key = e.image_key; });
-  extras.push(e);
   closeSheet(); render(); persist('foto trocada');
 }
 
