@@ -201,7 +201,7 @@ function b64d(s){ return decodeURIComponent(escape(atob(s))); }
 function pat(){ return localStorage.getItem(PAT_KEY) || ''; }
 
 async function ghGet(path){
-  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?t=` + Date.now(), {
     headers: { Authorization: `Bearer ${pat()}`, Accept: 'application/vnd.github+json' }
   });
   if (r.status === 404) return null;
@@ -592,7 +592,9 @@ function openSheet(k){
   const isScheduled = !!ag;
   $('sheet').innerHTML = `
     <img class="photo" src="${esc(p.url)}" alt="">
-    <div class="row">
+    <div class="label" style="margin-top:10px">📁 Casamento / Pasta</div>
+    <input id="couple-input" placeholder="Nome do casal / pasta" value="${esc(p.couple || p.title || '')}">
+    <div class="row" style="margin-top:8px">
       <button class="btn ok" data-a="approve">✓ Aprovar</button>
       <button class="btn no" data-a="reject">✗ Recusar</button>
       <button class="btn swap" data-a="swap">🔄 Trocar foto</button>
@@ -611,8 +613,8 @@ function openSheet(k){
     <div class="count" id="capcount"></div>
     <div class="label">Hashtags</div>
     <textarea id="tags" rows="2">${esc((p.hashtags||[]).join(' '))}</textarea>
-    <div class="label">Taguear pessoas (@usuario, vírgula)</div>
-    <input id="usertags" placeholder="@noiva, @noivo" value="${esc((p.user_tags||[]).join(', '))}">
+    <div class="label">Casal e Fornecedores (@usuario, hashtags, vírgula)</div>
+    <input id="usertags" placeholder="@noiva, @espaco_festa, @vestido" value="${esc((p.user_tags||[]).join(', '))}">
     <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
   `;
   $('overlay').classList.add('open');
@@ -645,8 +647,9 @@ function openCarSheet(cid){
     <div class="row" style="margin-top:8px">
       <button class="btn ghost sm" data-car-add="1">+ Adicionar foto da gaveta</button>
     </div>
-    <div class="label" style="margin-top:10px">${esc(c.title || 'Carrossel')}</div>
-    <div class="row">
+    <div class="label" style="margin-top:10px">📁 Casamento / Pasta</div>
+    <input id="couple-input" placeholder="Nome do casal / pasta" value="${esc(c.couple || c.title || '')}">
+    <div class="row" style="margin-top:8px">
       <button class="btn ok" data-a="approve">✓ Aprovar</button>
       <button class="btn no" data-a="reject">✗ Recusar</button>
     </div>
@@ -658,6 +661,8 @@ function openCarSheet(cid){
     <textarea id="cap" rows="4">${esc(c.caption)}</textarea>
     <div class="label">Hashtags</div>
     <textarea id="tags" rows="2">${esc((c.hashtags||[]).join(' '))}</textarea>
+    <div class="label">Casal e Fornecedores (@usuario, hashtags, vírgula)</div>
+    <input id="usertags" placeholder="@noiva, @espaco_festa, @vestido" value="${esc((c.user_tags||[]).join(', '))}">
     <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
   `;
   $('overlay').classList.add('open');
@@ -702,6 +707,7 @@ function act(a){
   }
   else if (a === 'save'){
     p.caption = $('cap').value.trim();
+    const cp = $('couple-input'); if (cp) p.couple = cp.value.trim();
     const t = $('tags').value.trim(); p.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
     const ut = $('usertags').value.trim();
     p.user_tags = ut ? ut.split(',').map(s => s.trim().replace(/^@/,'')).filter(Boolean).map(s => '@'+s) : [];
@@ -718,7 +724,10 @@ function actCar(a){
   else if (a === 'unschedule'){ agenda = agenda.filter(x => x.carousel_id !== curCid); }
   else if (a === 'save'){
     c.caption = $('cap').value.trim();
+    const cp = $('couple-input'); if (cp) c.couple = cp.value.trim();
     const t = $('tags').value.trim(); c.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
+    const ut = $('usertags').value.trim();
+    c.user_tags = ut ? ut.split(',').map(s => s.trim().replace(/^@/,'')).filter(Boolean).map(s => '@'+s) : [];
     const s = $('sched'); if (s){ const ag = agenda.find(x => x.carousel_id === curCid); if (ag) ag.scheduled_at = fromLocalInput(s.value) || ag.scheduled_at; }
   }
   if (a === 'save'){ closeSheet(); render(); persist('carrossel editado'); }
