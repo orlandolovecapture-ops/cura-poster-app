@@ -181,7 +181,7 @@ let briefing = null, insights = null;
 let spending = [], analysis = null, insightsInterval = 15;
 let posted = new Set(), usage = {}, generatedAt = null;
 let isHosted = false;
-let viewMode = 'list', calMonth = new Date();
+let viewMode = localStorage.getItem('cp_view') || 'list', calMonth = new Date();
 
 const REPO_OWNER = 'orlandolovecapture-ops';
 const REPO_NAME = 'cura-poster';
@@ -364,8 +364,8 @@ function render(){
   $('gaveta-n').textContent = gav.length;
   $('gaveta-empty').style.display = gav.length ? 'none' : 'block';
 }
-$('view-list').addEventListener('click', () => { viewMode='list'; render(); });
-$('view-cal').addEventListener('click', () => { viewMode='cal'; render(); });
+$('[view-list], #view-list').addEventListener('click', () => { viewMode='list'; localStorage.setItem('cp_view', 'list'); render(); });
+$('[view-cal], #view-cal').addEventListener('click', () => { viewMode='cal'; localStorage.setItem('cp_view', 'cal'); render(); });
 
 // ---------------- drag & drop ----------------
 let dragKey = null, dragCid = null;
