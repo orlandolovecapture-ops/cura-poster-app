@@ -63,13 +63,14 @@
   .cal-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
   .cal-dow { text-align: center; font-size: 10px; color: var(--muted); padding: 4px 0; font-weight: 700; }
-  .cal-day { min-height: 64px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; font-size: 11px; }
+  .cal-day { min-height: 96px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px; font-size: 11px; }
   .cal-day.empty { background: transparent; border-color: transparent; }
   .cal-day.today { border-color: var(--accent); }
-  .cal-day .dnum { color: var(--muted); font-weight: 700; margin-bottom: 3px; }
-  .cal-item { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 6px; padding: 2px 3px; margin-bottom: 3px; cursor: pointer; overflow: hidden; }
-  .cal-item img { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; flex: none; }
-  .cal-item span { font-size: 9px; color: var(--muted); white-space: nowrap; }
+  .cal-day .dnum { color: var(--muted); font-weight: 700; margin-bottom: 4px; font-size: 13px; }
+  .cal-item { display: flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 8px; padding: 4px 6px; margin-bottom: 4px; cursor: pointer; overflow: hidden; border: 1px solid var(--border); }
+  .cal-item img { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex: none; }
+  .cal-item span { font-size: 10px; color: var(--text); font-weight: 600; white-space: nowrap; }
+  .cal-item.dup { border-color: var(--red); background: rgba(255,0,0,0.1); }
 
   .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
 
@@ -295,7 +296,9 @@ function renderCal(){
   const days = new Date(y, mo+1, 0).getDate();
   const off = new Date(y, mo, 1).getDay();
   const byDay = {};
+  const slotCount = {};
   agenda.forEach(a => {
+    slotCount[a.scheduled_at] = (slotCount[a.scheduled_at] || 0) + 1;
     const d = new Date(a.scheduled_at);
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     (byDay[key] = byDay[key] || []).push(a);
@@ -311,12 +314,14 @@ function renderCal(){
     h += `<div class="cal-day ${isToday?'today':''}"><div class="dnum">${day}</div>`;
     items.forEach(a => {
       const t = new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const isDup = (slotCount[a.scheduled_at] || 0) > 1;
       if (a.kind === 'carousel'){
         const c = carouselById(a.carousel_id); if (!c) return;
-        h += `<div class="cal-item" data-cid="${esc(c.id)}">▦<span>${t}</span></div>`;
+        const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
+        h += `<div class="cal-item ${isDup?'dup':''}" data-cid="${esc(c.id)}">${img1?`<img src="${esc(img1)}">`:''}<span>${t} ${isDup?'⚠️ DUPLICADO':''}</span></div>`;
       } else {
         const p = photoByKey(a.image_key); if (!p) return;
-        h += `<div class="cal-item" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t}</span></div>`;
+        h += `<div class="cal-item ${isDup?'dup':''}" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t} ${isDup?'⚠️ DUPLICADO':''}</span></div>`;
       }
     });
     h += `</div>`;
@@ -333,6 +338,9 @@ function render(){
   $('agenda-empty').style.display = agenda.length ? 'none' : 'block';
   $('view-list').classList.toggle('on', viewMode === 'list');
   $('view-cal').classList.toggle('on', viewMode === 'cal');
+
+  const gavSec = document.querySelectorAll('.section')[1];
+  if (gavSec) gavSec.style.display = (viewMode === 'cal') ? 'none' : 'block';
 
   const gavSingles = photos.filter(p => !inAgenda(p.image_key));
   const gavCars = carousels.filter(c => !inAgendaCar(c.id) && c.status !== 'rejected');
