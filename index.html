@@ -873,7 +873,19 @@ function openSimone(){
     </div>
   `;
   $('simone-overlay').classList.add('open');
+  let simoneRunning = false, simoneCancel = false;
+
   $('simone-send').addEventListener('click', () => {
+    const btn = $('simone-send');
+    if (simoneRunning){
+      simoneCancel = true;
+      simoneRunning = false;
+      btn.textContent = 'Enviar';
+      btn.style.background = '';
+      const prog = $('prog-bar'); if (prog) prog.classList.remove('active');
+      addChat('simone', 'Ação interrompida.');
+      return;
+    }
     const v = $('simone-input').value.trim();
     if (v){ sendSimone(v); $('simone-input').value = ''; }
   });
@@ -893,6 +905,10 @@ async function sendSimone(text){
   addChat('user', text);
   if (!isHosted){ addChat('simone', '(no preview a Simone não roda — ela funciona no app hospedado)'); return; }
   if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
+  simoneRunning = true;
+  simoneCancel = false;
+  const btn = $('simone-send');
+  if (btn){ btn.textContent = 'Parar'; btn.style.background = 'var(--red)'; }
   const prog = $('prog-bar');
   if (prog) prog.classList.add('active');
   try {
@@ -901,17 +917,22 @@ async function sendSimone(text){
     selection.clear(); renderSelBar();
     let before = null;
     try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
-    addChat('simone', 'Processando pedido...');
+    addChat('simone', 'Processando em segundo plano...');
     const thinkEl = $('chat').lastElementChild;
     for (let i=0; i<60; i++){
+      if (simoneCancel) break;
       await new Promise(r => setTimeout(r, 5000));
+      if (simoneCancel) break;
       try {
         const r = await ghGet('state/simone_reply.json');
         if (r && r.data.at !== before){
           if (thinkEl) thinkEl.remove();
           if (prog) prog.classList.remove('active');
+          if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
+          simoneRunning = false;
           addChat('simone', r.data.reply);
           lastSimoneReply = r.data.reply;
+          toast('A Simone concluiu seu pedido! 💬');
           await loadRemote();
           return;
         }
@@ -919,9 +940,13 @@ async function sendSimone(text){
     }
     if (thinkEl) thinkEl.remove();
     if (prog) prog.classList.remove('active');
-    addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
+    if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
+    simoneRunning = false;
+    if (!simoneCancel) addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
   } catch(e){
     if (prog) prog.classList.remove('active');
+    if (btn){ btn.textContent = 'Enviar'; btn.style.background = ''; }
+    simoneRunning = false;
     addChat('simone', 'Erro: ' + e.message);
   }
 }
