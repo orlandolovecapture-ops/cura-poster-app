@@ -30,7 +30,9 @@
 
   .agenda { display: flex; flex-direction: column; gap: 8px; }
   .agenda.drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 12px; }
-  .acard { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: grab; }
+  .acard-wrap { position: relative; overflow: hidden; border-radius: 12px; background: var(--red); margin-bottom: 0px; }
+  .delete-bg { position: absolute; inset: 0; background: var(--red); display: flex; align-items: center; justify-content: flex-end; padding-right: 24px; color: #fff; font-size: 20px; font-weight: 700; z-index: 1; }
+  .acard { position: relative; display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: grab; z-index: 2; transition: transform .15s ease; user-select: none; }
   .acard .thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; background: #222; }
   .acard .stack { position: relative; width: 56px; height: 56px; flex: none; }
   .acard .stack img { position: absolute; width: 56px; height: 56px; border-radius: 8px; object-fit: cover; border: 1px solid var(--card); }
@@ -264,24 +266,28 @@ function renderList(){
       const c = carouselById(a.carousel_id); if (!c) return '';
       const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
       const img2 = c.urls && c.urls[1] ? c.urls[1] : '';
-      return `<div class="acard" draggable="true" data-cid="${esc(c.id)}">
-        <span class="grip">⠿</span><span class="num">${i+1}</span>
-        <span class="stack">${img1?`<img src="${esc(img1)}">`:''}${img2?`<img src="${esc(img2)}">`:''}</span>
-        <div class="info">
-          <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
-          <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
-        </div>
-        <button class="rm" data-rm-agenda="${esc(id)}" title="Remover da agenda" style="position:relative;top:auto;right:auto;opacity:1;flex:none;margin-left:6px">×</button></div>`;
+      return `<div class="acard-wrap" data-aid="${esc(id)}">
+        <div class="delete-bg">🗑️</div>
+        <div class="acard" draggable="true" data-cid="${esc(c.id)}">
+          <span class="grip">⠿</span><span class="num">${i+1}</span>
+          <span class="stack">${img1?`<img src="${esc(img1)}">`:''}${img2?`<img src="${esc(img2)}">`:''}</span>
+          <div class="info">
+            <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
+            <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
+          </div>
+        </div></div>`;
     }
     const p = photoByKey(a.image_key); if (!p) return '';
-    return `<div class="acard" draggable="true" data-k="${esc(a.image_key)}">
-      <span class="grip">⠿</span><span class="num">${i+1}</span>
-      <img class="thumb" src="${esc(p.url)}" alt="">
-      <div class="info">
-        <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
-        <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
-      </div>
-      <button class="rm" data-rm-agenda="${esc(id)}" title="Remover da agenda" style="position:relative;top:auto;right:auto;opacity:1;flex:none;margin-left:6px">×</button></div>`;
+    return `<div class="acard-wrap" data-aid="${esc(id)}">
+      <div class="delete-bg">🗑️</div>
+      <div class="acard" draggable="true" data-k="${esc(a.image_key)}">
+        <span class="grip">⠿</span><span class="num">${i+1}</span>
+        <img class="thumb" src="${esc(p.url)}" alt="">
+        <div class="info">
+          <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
+          <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
+        </div>
+      </div></div>`;
   }).join('');
 }
 function renderCal(){
@@ -424,41 +430,57 @@ document.addEventListener('click', e => {
   else if (cell.dataset.k) openSheet(cell.dataset.k);
 });
 
-// ---------------- swipe para excluir na agenda ----------------
-document.addEventListener('touchstart', e => {
-  const card = e.target.closest('.acard');
+// ---------------- swipe para excluir na agenda (estilo Mail iOS/Mac) ----------------
+let swipeCard = null, swipeStartX = 0, swipeCurrentX = 0;
+
+function onSwipeStart(clientX, target){
+  const card = target.closest('.acard');
   if (!card) return;
-  card._startX = e.touches[0].clientX;
-  card._currentX = card._startX;
-}, {passive: true});
+  swipeCard = card;
+  swipeStartX = clientX;
+  swipeCurrentX = swipeStartX;
+  swipeCard.style.transition = 'none';
+}
 
-document.addEventListener('touchmove', e => {
-  const card = e.target.closest('.acard');
-  if (!card || card._startX === undefined) return;
-  card._currentX = e.touches[0].clientX;
-  const diff = card._currentX - card._startX;
-  if (diff < 0 && diff > -120){
-    card.style.transform = `translateX(${diff}px)`;
-    card.style.transition = 'none';
+function onSwipeMove(clientX){
+  if (!swipeCard) return;
+  swipeCurrentX = clientX;
+  const diff = swipeCurrentX - swipeStartX;
+  if (diff < 0 && diff > -140){
+    swipeCard.style.transform = `translateX(${diff}px)`;
   }
-}, {passive: true});
+}
 
-document.addEventListener('touchend', e => {
-  const card = e.target.closest('.acard');
-  if (!card || card._startX === undefined) return;
-  const diff = (card._currentX || card._startX) - card._startX;
-  card.style.transition = 'transform .2s ease';
-  card.style.transform = '';
-  if (diff < -70){
-    const aid = card.dataset.cid || card.dataset.k;
-    if (aid){
+function onSwipeEnd(){
+  if (!swipeCard) return;
+  const diff = swipeCurrentX - swipeStartX;
+  swipeCard.style.transition = 'transform .2s ease';
+  swipeCard.style.transform = '';
+  if (diff < -80){
+    const wrap = swipeCard.closest('.acard-wrap');
+    if (wrap){
+      const aid = wrap.dataset.aid;
       agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
       render(); persist('removido da agenda');
       toast('Post removido da agenda');
     }
   }
-  delete card._startX;
-  delete card._currentX;
+  swipeCard = null;
+}
+
+document.addEventListener('touchstart', e => onSwipeStart(e.touches[0].clientX, e.target), {passive: true});
+document.addEventListener('touchmove', e => onSwipeMove(e.touches[0].clientX), {passive: true});
+document.addEventListener('touchend', () => onSwipeEnd());
+
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  onSwipeStart(e.clientX, e.target);
+});
+document.addEventListener('mousemove', e => {
+  if (swipeCard) onSwipeMove(e.clientX);
+});
+document.addEventListener('mouseup', () => {
+  if (swipeCard) onSwipeEnd();
 });
 function renderSelBar(){
   $('sel-count').textContent = `${selection.size} selecionada${selection.size===1?'':'s'}`;
