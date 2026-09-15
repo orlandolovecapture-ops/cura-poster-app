@@ -644,9 +644,11 @@ function renderBriefing(){
   });
 }
 $('brief-btn').addEventListener('click', renderBriefing);
-$('refresh-btn').addEventListener('click', () => {
-  toast('Atualizando...');
-  window.location.reload();
+$('refresh-btn').addEventListener('click', async () => {
+  if (!pat()){ openSettings(); return; }
+  toast('Atualizando dados...');
+  await loadRemote();
+  toast('Atualizado ✓');
 });
 $('brief-overlay').addEventListener('click', e => { if (e.target.id === 'brief-overlay') $('brief-overlay').classList.remove('open'); });
 
