@@ -316,11 +316,17 @@ function render(){
   $('view-list').classList.toggle('on', viewMode === 'list');
   $('view-cal').classList.toggle('on', viewMode === 'cal');
 
-  const gav = photos.filter(p => !inAgenda(p.image_key));
-  $('gaveta').innerHTML = gav.map(p => `
-    <div class="cell ${p.status==='rejected'?'dim':''}" draggable="true" data-k="${esc(p.image_key)}">
-      <img loading="lazy" src="${esc(p.url)}" alt="">
-      ${posted.has(p.image_key)?'<span class="p pill ok">✓</span>':(p.status==='rejected'?'<span class="p pill no">✗</span>':'')}
+  const gavSingles = photos.filter(p => !inAgenda(p.image_key));
+  const gavCars = carousels.filter(c => !inAgendaCar(c.id) && c.status !== 'rejected');
+  const gav = [
+    ...gavSingles.map(p => ({t:'s', k:p.image_key, url:p.url, status:p.status})),
+    ...gavCars.map(c => ({t:'c', k:c.id, url:(c.urls&&c.urls[0])||'', status:c.status}))
+  ];
+  $('gaveta').innerHTML = gav.map(g => `
+    <div class="cell ${g.status==='rejected'?'dim':''}" draggable="true" data-k="${esc(g.t==='s'?g.k:'')}" data-cid="${esc(g.t==='c'?g.k:'')}">
+      <img loading="lazy" src="${esc(g.url)}" alt="">
+      ${g.t==='c'?'<span class="pill car">▦ carrossel</span>':''}
+      ${g.t==='s' && posted.has(g.k)?'<span class="pill ok">✓</span>':''}
     </div>`).join('');
   $('gaveta-n').textContent = gav.length;
   $('gaveta-empty').style.display = gav.length ? 'none' : 'block';
