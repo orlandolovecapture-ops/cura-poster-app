@@ -559,12 +559,12 @@ function openCarSheet(cid){
   const urls = c.urls || [];
   const photosHtml = keys.map((k, idx) => {
     const u = urls[idx] || '';
-    return `<div style="position:relative;flex:none">
-      <img src="${esc(u)}" style="width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
-      <button class="rm" data-car-rm="${idx}" style="opacity:1;top:2px;right:2px;width:18px;height:18px;font-size:10px">×</button>
-      <div style="display:flex;justify-content:space-between;margin-top:2px">
-        ${idx>0?`<button class="btn ghost sm" style="padding:1px 4px;font-size:10px" data-car-move="${idx},-1">‹</button>`:'<span></span>'}
-        ${idx<keys.length-1?`<button class="btn ghost sm" style="padding:1px 4px;font-size:10px" data-car-move="${idx},1">›</button>`:'<span></span>'}
+    return `<div style="position:relative;width:90px;height:90px;flex:none;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#111">
+      <img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover;display:block">
+      <button class="rm" data-car-rm="${idx}" style="opacity:1;top:4px;right:4px;width:22px;height:22px;font-size:12px">×</button>
+      <div style="position:absolute;bottom:4px;left:4px;right:4px;display:flex;justify-content:space-between;pointer-events:none">
+        ${idx>0?`<button class="btn ghost sm" style="pointer-events:auto;padding:2px 6px;font-size:11px;background:rgba(0,0,0,0.7);color:#fff;border:0" data-car-move="${idx},-1">‹</button>`:'<span></span>'}
+        ${idx<keys.length-1?`<button class="btn ghost sm" style="pointer-events:auto;padding:2px 6px;font-size:11px;background:rgba(0,0,0,0.7);color:#fff;border:0" data-car-move="${idx},1">›</button>`:'<span></span>'}
       </div>
     </div>`;
   }).join('');
