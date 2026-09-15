@@ -903,7 +903,7 @@ async function sendSimone(text){
     try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
     addChat('simone', 'Processando pedido...');
     const thinkEl = $('chat').lastElementChild;
-    for (let i=0; i<36; i++){
+    for (let i=0; i<60; i++){
       await new Promise(r => setTimeout(r, 5000));
       try {
         const r = await ghGet('state/simone_reply.json');
