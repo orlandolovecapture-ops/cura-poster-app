@@ -297,8 +297,11 @@ function renderCal(){
   const off = new Date(y, mo, 1).getDay();
   const byDay = {};
   const slotCount = {};
+  const itemCounts = {};
   agenda.forEach(a => {
     slotCount[a.scheduled_at] = (slotCount[a.scheduled_at] || 0) + 1;
+    const aid = a.carousel_id || a.image_key;
+    if (aid) itemCounts[aid] = (itemCounts[aid] || 0) + 1;
     const d = new Date(a.scheduled_at);
     const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     (byDay[key] = byDay[key] || []).push(a);
@@ -315,13 +318,17 @@ function renderCal(){
     items.forEach(a => {
       const t = new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       const isDup = (slotCount[a.scheduled_at] || 0) > 1;
+      const aid = a.carousel_id || a.image_key;
+      const isRepeated = (itemCounts[aid] || 0) > 1;
+      const alertText = isDup ? '⚠️ DUPLICADO' : (isRepeated ? '⚠️ REPETIDO' : '');
+      const hasAlert = isDup || isRepeated;
       if (a.kind === 'carousel'){
         const c = carouselById(a.carousel_id); if (!c) return;
         const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
-        h += `<div class="cal-item ${isDup?'dup':''}" data-cid="${esc(c.id)}">${img1?`<img src="${esc(img1)}">`:''}<span>${t} ${isDup?'⚠️ DUPLICADO':''}</span></div>`;
+        h += `<div class="cal-item ${hasAlert?'dup':''}" data-cid="${esc(c.id)}">${img1?`<img src="${esc(img1)}">`:''}<span>${t} ${alertText}</span></div>`;
       } else {
         const p = photoByKey(a.image_key); if (!p) return;
-        h += `<div class="cal-item ${isDup?'dup':''}" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t} ${isDup?'⚠️ DUPLICADO':''}</span></div>`;
+        h += `<div class="cal-item ${hasAlert?'dup':''}" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t} ${alertText}</span></div>`;
       }
     });
     h += `</div>`;
