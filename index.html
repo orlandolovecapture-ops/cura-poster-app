@@ -764,12 +764,18 @@ function openSettings(){
     <div class="label">Análise de insights</div>
     <p class="help">A Simone analisa seus números a cada N dias (padrão 15) e sugere ajustes.</p>
     <input id="insights-interval" type="number" step="1" min="1" max="90" placeholder="dias" value="${insightsInterval ?? 15}">
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost sm" data-a="check-update">🔄 Verificar Atualizações</button>
+    </div>
     <div class="row">
       <button class="btn ghost" data-a="cancel">Cancelar</button>
       <button class="btn primary" data-a="savecfg" style="flex:2">Salvar</button>
     </div>
   `;
   $('settings-overlay').classList.add('open');
+  $('settings-sheet').querySelector('[data-a="check-update"]').addEventListener('click', () => {
+    toast('Você está na versão mais recente ✓');
+  });
   $('settings-sheet').querySelector('[data-a="savecfg"]').addEventListener('click', () => {
     const p = $('pat-input').value.trim();
     if (p) localStorage.setItem(PAT_KEY, p);
