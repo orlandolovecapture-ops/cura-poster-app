@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cura Poster</title>
+<style>
+  :root {
+    --bg: #0f0f12; --card: #1a1a20; --border: #2a2a33;
+    --text: #f0eef4; --muted: #9a97a6;
+    --accent: #e86a8a; --accent2: #6a8ae8;
+    --green: #34c98e; --red: #e05656; --amber: #e8a33d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; padding-bottom: 80px; }
+  header { position: sticky; top: 0; z-index: 30; background: rgba(15,15,18,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 12px 16px; }
+  header .top { display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  header .tokens { margin-left: auto; font-size: 11px; color: var(--muted); background: var(--card); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+  header .tokens b { color: var(--text); }
+  header .gear { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px; }
+  .hint { padding: 8px 14px; font-size: 12px; color: var(--muted); }
+
+  .section { padding: 14px 16px 4px; }
+  .section .stitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .section .stitle .n { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; font-size: 11px; }
+  .viewseg { margin-left: auto; display: flex; gap: 3px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+  .viewseg button { border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+  .viewseg button.on { background: var(--accent); color: #fff; }
+
+  .agenda { display: flex; flex-direction: column; gap: 8px; }
+  .agenda.drop { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 12px; }
+  .acard { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: grab; }
+  .acard .thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex: none; background: #222; }
+  .acard .stack { position: relative; width: 56px; height: 56px; flex: none; }
+  .acard .stack img { position: absolute; width: 56px; height: 56px; border-radius: 8px; object-fit: cover; border: 1px solid var(--card); }
+  .acard .stack img:nth-child(1){ top:0; left:0; }
+  .acard .stack img:nth-child(2){ top:3px; left:3px; opacity:.6; }
+  .acard .info { flex: 1; min-width: 0; }
+  .acard .info .cap { font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .acard .info .meta { font-size: 11px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .acard .num { font-weight: 800; color: var(--muted); font-size: 15px; width: 18px; text-align: center; flex: none; }
+  .acard .grip { color: var(--muted); font-size: 16px; flex: none; }
+  .pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+  .pill.ok { background: var(--green); color: #05210f; }
+  .pill.no { background: var(--red); color: #fff; }
+  .pill.car { background: var(--accent2); color: #fff; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+  .grid.drop { outline: 2px dashed var(--accent2); outline-offset: 4px; border-radius: 12px; }
+  .cell { position: relative; aspect-ratio: 1/1; overflow: hidden; cursor: grab; background: var(--card); }
+  .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cell.dim img { opacity: .35; filter: grayscale(.7); }
+  .cell .p { position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+  .cell .rm { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: 0; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; opacity: 0; transition: opacity .2s; }
+  .cell:hover .rm { opacity: 1; }
+  .cell .badge-left { position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; z-index: 4; }
+
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .cal-nav .mnth { font-weight: 700; font-size: 14px; }
+  .cal-nav button { background: var(--card); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-dow { text-align: center; font-size: 10px; color: var(--muted); padding: 4px 0; font-weight: 700; }
+  .cal-day { min-height: 64px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; font-size: 11px; }
+  .cal-day.empty { background: transparent; border-color: transparent; }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day .dnum { color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+  .cal-item { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 6px; padding: 2px 3px; margin-bottom: 3px; cursor: pointer; overflow: hidden; }
+  .cal-item img { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; flex: none; }
+  .cal-item span { font-size: 9px; color: var(--muted); white-space: nowrap; }
+
+  .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 50; display: none; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .sheet { background: var(--bg); border: 1px solid var(--border); border-bottom: 0; border-radius: 18px 18px 0 0; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; padding: 16px; animation: up .22s ease; }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheet .photo { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); }
+  .sheet .photos { display: flex; gap: 6px; overflow-x: auto; }
+  .sheet .photos img { width: 90px; height: 90px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
+  .sheet .label { font-size: 11px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  .sheet textarea, .sheet input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; padding: 10px 12px; font-family: inherit; }
+  .sheet textarea { resize: vertical; }
+  .sheet .count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 3px; }
+  .sheet .help { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+  .btn { border: 0; border-radius: 10px; padding: 11px 14px; font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; }
+  .btn.ok { background: var(--green); color: #05210f; }
+  .btn.no { background: var(--red); }
+  .btn.swap { background: var(--accent2); }
+  .btn.ghost { background: var(--card); border: 1px solid var(--border); color: var(--text); }
+  .btn.primary { background: var(--accent); }
+  .btn.sm { padding: 8px 10px; font-size: 12px; }
+  .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .row .btn { flex: 1; }
+
+  /* chat Simone */
+  #simone-fab { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-size: 24px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 60; }
+  .chat-msg { margin: 8px 0; max-width: 85%; padding: 10px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+  .chat-msg.user { background: var(--accent); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+  .chat-msg.simone { background: var(--card); border: 1px solid var(--border); margin-right: auto; border-bottom-left-radius: 4px; }
+  .chat-msg.thinking { color: var(--muted); font-style: italic; }
+  .chat-input { display: flex; gap: 8px; margin-top: 10px; }
+  .chat-input input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); padding: 11px 13px; font-size: 14px; }
+  .chat-input button { border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 0 18px; font-weight: 700; cursor: pointer; }
+
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--green); color: #05210f; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 24px; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--red); color: #fff; }
+
+  .sel-bar { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 8px 14px; display: none; gap: 10px; align-items: center; z-index: 55; }
+  .sel-bar.show { display: flex; }
+  .cell.sel { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .cell.sel::after { content: '✓'; position: absolute; top: 6px; left: 6px; background: var(--accent); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .htable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .htable th, .htable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .htable th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  .htable td.r { text-align: right; }
+  .blist { margin: 0 0 10px; padding-left: 18px; }
+  .blist li { margin: 4px 0; font-size: 13px; }
+  .chip { display: inline-block; background: var(--border); padding: 3px 8px; border-radius: 12px; font-size: 11px; margin: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>Cura Poster</h1>
+    <div class="tokens" id="tokens">—</div>
+    <button class="gear" id="sel-btn" title="Selecionar fotos">☑️</button>
+    <button class="gear" id="brief-btn" title="Briefing de hoje">💡</button>
+    <button class="gear" id="hist-btn" title="Histórico de gastos">💰</button>
+    <button class="gear" id="gear" title="Configurar">⚙️</button>
+  </div>
+  <div class="hint" id="hint">Arraste para reordenar. Toque numa foto para editar. Use o botão rosa pra falar com a Simone.</div>
+</header>
+
+<div class="section">
+  <div class="stitle">📅 Agenda <span class="n" id="agenda-n">0</span>
+    <div class="viewseg">
+      <button id="view-list" class="on">Lista</button>
+      <button id="view-cal">Calendário</button>
+    </div>
+  </div>
+  <div class="agenda" id="agenda"></div>
+  <div class="empty" id="agenda-empty" style="display:none">Agenda vazia — arraste fotos da gaveta pra cá.</div>
+</div>
+
+<div class="section">
+  <div class="stitle">🗂️ Gaveta <span class="n" id="gaveta-n">0</span></div>
+  <div class="grid" id="gaveta"></div>
+  <div class="empty" id="gaveta-empty" style="display:none">Gaveta vazia.</div>
+</div>
+
+<button id="simone-fab" title="Falar com a Simone">💬</button>
+<div class="sel-bar" id="sel-bar">
+  <span id="sel-count" style="font-size:13px">0 selecionadas</span>
+  <button class="btn primary sm" id="sel-simone">Pedir pra Simone</button>
+  <button class="btn ghost sm" id="sel-clear">Limpar</button>
+</div>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="overlay" id="settings-overlay"><div class="sheet" id="settings-sheet"></div></div>
+<div class="overlay" id="simone-overlay"><div class="sheet" id="simone-sheet"></div></div>
+<div class="overlay" id="hist-overlay"><div class="sheet" id="hist-sheet"></div></div>
+<div class="overlay" id="brief-overlay"><div class="sheet" id="brief-sheet"></div></div>
+<div class="toast" id="toast">Salvo</div>
+
+<script type="application/json" id="data">null</script>
+
+<script>
+let photos = [], extras = [], agenda = [], carousels = [];
+let briefing = null, insights = null;
+let spending = [], analysis = null, insightsInterval = 15;
+let posted = new Set(), usage = {}, generatedAt = null;
+let isHosted = false;
+let viewMode = 'list', calMonth = new Date();
+
+const REPO_OWNER = 'orlandolovecapture-ops';
+const REPO_NAME = 'cura-poster';
+const PAT_KEY = 'cp_pat';
+const PRICE_KEY = 'cp_price';
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DOW = ['D','S','T','Q','Q','S','S'];
+
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = id => document.getElementById(id);
+const toast = (m, err) => { const t = $('toast'); t.textContent = m; t.classList.toggle('err', !!err); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); };
+
+function photoByKey(k){ return [...photos, ...extras].find(p => p.image_key === k); }
+function carouselById(id){ return carousels.find(c => c.id === id); }
+function inAgenda(k){ return agenda.some(a => a.image_key === k); }
+function inAgendaCar(id){ return agenda.some(a => a.carousel_id === id); }
+
+function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+function b64d(s){ return decodeURIComponent(escape(atob(s))); }
+function pat(){ return localStorage.getItem(PAT_KEY) || ''; }
+
+async function ghGet(path){
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+    headers: { Authorization: `Bearer ${pat()}`, Accept: 'application/vnd.github+json' }
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  const j = await r.json();
+  return { data: JSON.parse(b64d(j.content)), sha: j.sha };
+}
+async function ghPut(path, obj, sha, msg){
+  const r = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${pat()}`, Accept: 'application/vnd.github+json' },
+    body: JSON.stringify({ message: msg || 'edição pelo app', content: b64e(JSON.stringify(obj, null, 2)), sha })
+  });
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  return r.json();
+}
+
+function priceCfg(){ try { return JSON.parse(localStorage.getItem(PRICE_KEY)) || {}; } catch(e){ return {}; } }
+function monthCost(){
+  const m = new Date().toISOString().slice(0,7);
+  const u = usage[m]; if (!u) return null;
+  const c = priceCfg();
+  const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
+  const input = u.input ?? Math.round((u.tokens||0) * 0.6);
+  const output = u.output ?? Math.round((u.tokens||0) * 0.4);
+  return ((input/1e6)*inP + (output/1e6)*outP) * brl;
+}
+function renderTokens(){
+  const m = new Date().toISOString().slice(0,7);
+  const u = usage[m];
+  const tok = u ? (u.tokens||0) : 0;
+  const cost = monthCost();
+  const cstr = cost != null ? 'R$ ' + cost.toFixed(2).replace('.', ',') : 'R$ 0,00';
+  $('tokens').innerHTML = `${cstr} · <b>${tok.toLocaleString('pt-BR')}</b> tok`;
+}
+
+function fmt(s){ if(!s) return '—'; const d = new Date(s); return d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit', hour:'2-digit', minute:'2-digit'}); }
+function toLocalInput(s){ const d = new Date(s); const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fromLocalInput(v){ return v ? new Date(v).toISOString() : null; }
+function nextFreeSlot(){
+  let base = new Date();
+  const all = agenda.map(a=>new Date(a.scheduled_at)).filter(d=>!isNaN(d)).sort((a,b)=>b-a);
+  if (all.length && all[0] > base) base = all[0];
+  for (let d=0; d<60; d++) for (const [h,m] of [[9,0],[18,0]]){
+    const cand = new Date(base); cand.setDate(cand.getDate()+d); cand.setHours(h,m,0,0);
+    if (cand > new Date()) return cand.toISOString();
+  }
+  return new Date(Date.now()+86400000).toISOString();
+}
+
+function pillSingle(p){ return posted.has(p.image_key) ? '<span class="pill ok">publicada</span>' : (p.status==='rejected' ? '<span class="pill no">recusada</span>' : (p.status==='approved' ? '<span class="pill ok">aprovada</span>' : '')); }
+function pillCar(c){ return posted.has(c.id) ? '<span class="pill ok">publicado</span>' : (c.status==='rejected' ? '<span class="pill no">recusado</span>' : '<span class="pill car">▦ carrossel</span>'); }
+
+function renderList(){
+  $('agenda').innerHTML = agenda.map((a,i) => {
+    if (a.kind === 'carousel'){
+      const c = carouselById(a.carousel_id); if (!c) return '';
+      const past = new Date(a.scheduled_at) < new Date();
+      const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
+      const img2 = c.urls && c.urls[1] ? c.urls[1] : '';
+      return `<div class="acard" draggable="true" data-cid="${esc(c.id)}">
+        <span class="grip">⠿</span><span class="num">${i+1}</span>
+        <span class="stack">${img1?`<img src="${esc(img1)}">`:''}${img2?`<img src="${esc(img2)}">`:''}</span>
+        <div class="info">
+          <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
+          <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
+        </div></div>`;
+    }
+    const p = photoByKey(a.image_key); if (!p) return '';
+    const past = new Date(a.scheduled_at) < new Date();
+    return `<div class="acard" draggable="true" data-k="${esc(a.image_key)}">
+      <span class="grip">⠿</span><span class="num">${i+1}</span>
+      <img class="thumb" src="${esc(p.url)}" alt="">
+      <div class="info">
+        <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
+        <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
+      </div></div>`;
+  }).join('');
+}
+function renderCal(){
+  const y = calMonth.getFullYear(), mo = calMonth.getMonth();
+  const days = new Date(y, mo+1, 0).getDate();
+  const off = new Date(y, mo, 1).getDay();
+  const byDay = {};
+  agenda.forEach(a => {
+    const d = new Date(a.scheduled_at);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    (byDay[key] = byDay[key] || []).push(a);
+  });
+  let h = `<div class="cal-nav"><button id="cal-prev">‹</button><span class="mnth">${MONTHS[mo]} ${y}</span><button id="cal-next">›</button></div><div class="cal-grid">`;
+  DOW.forEach(d => h += `<div class="cal-dow">${d}</div>`);
+  for (let i=0;i<off;i++) h += `<div class="cal-day empty"></div>`;
+  const today = new Date();
+  for (let day=1; day<=days; day++){
+    const key = `${y}-${mo}-${day}`;
+    const items = byDay[key] || [];
+    const isToday = today.getFullYear()===y && today.getMonth()===mo && today.getDate()===day;
+    h += `<div class="cal-day ${isToday?'today':''}"><div class="dnum">${day}</div>`;
+    items.forEach(a => {
+      const t = new Date(a.scheduled_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if (a.kind === 'carousel'){
+        const c = carouselById(a.carousel_id); if (!c) return;
+        h += `<div class="cal-item" data-cid="${esc(c.id)}">▦<span>${t}</span></div>`;
+      } else {
+        const p = photoByKey(a.image_key); if (!p) return;
+        h += `<div class="cal-item" data-k="${esc(a.image_key)}"><img src="${esc(p.url)}"><span>${t}</span></div>`;
+      }
+    });
+    h += `</div>`;
+  }
+  h += `</div>`;
+  $('agenda').innerHTML = h;
+  $('cal-prev').onclick = () => { calMonth = new Date(y, mo-1, 1); render(); };
+  $('cal-next').onclick = () => { calMonth = new Date(y, mo+1, 1); render(); };
+}
+function render(){
+  renderTokens();
+  if (viewMode === 'cal') renderCal(); else renderList();
+  $('agenda-n').textContent = agenda.length;
+  $('agenda-empty').style.display = agenda.length ? 'none' : 'block';
+  $('view-list').classList.toggle('on', viewMode === 'list');
+  $('view-cal').classList.toggle('on', viewMode === 'cal');
+
+  const gavSingles = photos.filter(p => !inAgenda(p.image_key));
+  const gavCars = carousels.filter(c => !inAgendaCar(c.id) && c.status !== 'rejected');
+  const gav = [
+    ...gavSingles.map(p => ({t:'s', k:p.image_key, url:p.url, status:p.status})),
+    ...gavCars.map(c => ({t:'c', k:c.id, url:(c.urls&&c.urls[0])||'', count:(c.image_keys||[]).length, status:c.status}))
+  ];
+  $('gaveta').innerHTML = gav.map(g => `
+    <div class="cell ${g.status==='rejected'?'dim':''}" draggable="true" data-k="${esc(g.t==='s'?g.k:'')}" data-cid="${esc(g.t==='c'?g.k:'')}">
+      <img loading="lazy" src="${esc(g.url)}" alt="">
+      ${g.t==='c'?`<span class="badge-left">▦ ${g.count} fotos</span>`:''}
+      <button class="rm" data-rm-k="${esc(g.t==='s'?g.k:'')}" data-rm-cid="${esc(g.t==='c'?g.k:'')}" title="Remover">×</button>
+    </div>`).join('');
+  $('gaveta-n').textContent = gav.length;
+  $('gaveta-empty').style.display = gav.length ? 'none' : 'block';
+}
+$('view-list').addEventListener('click', () => { viewMode='list'; render(); });
+$('view-cal').addEventListener('click', () => { viewMode='cal'; render(); });
+
+// ---------------- drag & drop ----------------
+let dragKey = null, dragCid = null;
+document.addEventListener('dragstart', e => {
+  const el = e.target.closest('[draggable="true"]');
+  if (el){ dragKey = el.dataset.k || null; dragCid = el.dataset.cid || null; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain', dragKey || dragCid);}catch(_){} }
+});
+document.addEventListener('dragend', () => { dragKey = null; dragCid = null; $('agenda').classList.remove('drop'); $('gaveta').classList.remove('drop'); });
+
+const agendaEl = $('agenda');
+agendaEl.addEventListener('dragover', e => { e.preventDefault(); agendaEl.classList.add('drop'); });
+agendaEl.addEventListener('dragleave', () => agendaEl.classList.remove('drop'));
+agendaEl.addEventListener('drop', e => {
+  e.preventDefault(); agendaEl.classList.remove('drop');
+  const id = dragKey || dragCid || e.dataTransfer.getData('text/plain'); if (!id) return;
+  const target = e.target.closest('.acard');
+  const cur = dragCid ? {carousel_id: dragCid} : {image_key: dragKey};
+  const isIn = dragCid ? inAgendaCar(dragCid) : inAgenda(dragKey);
+  const findIdx = a => dragCid ? (a.carousel_id === dragCid) : (a.image_key === dragKey);
+  if (isIn){
+    const from = agenda.findIndex(findIdx);
+    let to = target ? agenda.findIndex(a => (a.carousel_id||a.image_key) === (target.dataset.cid||target.dataset.k)) : agenda.length - 1;
+    if (from < 0) return;
+    const [item] = agenda.splice(from, 1); agenda.splice(to, 0, item);
+  } else {
+    const item = dragCid ? {kind:'carousel', carousel_id: dragCid, scheduled_at: nextFreeSlot()} : {image_key: dragKey, scheduled_at: nextFreeSlot()};
+    if (target){ const to = agenda.findIndex(a => (a.carousel_id||a.image_key) === (target.dataset.cid||target.dataset.k)); agenda.splice(to, 0, item); }
+    else agenda.push(item);
+  }
+  render(); persist('reordenado');
+});
+
+const gavetaEl = $('gaveta');
+gavetaEl.addEventListener('dragover', e => { e.preventDefault(); gavetaEl.classList.add('drop'); });
+gavetaEl.addEventListener('dragleave', () => gavetaEl.classList.remove('drop'));
+gavetaEl.addEventListener('drop', e => {
+  e.preventDefault(); gavetaEl.classList.remove('drop');
+  const id = dragKey || dragCid || e.dataTransfer.getData('text/plain');
+  if (dragCid && inAgendaCar(dragCid)){ agenda = agenda.filter(a => a.carousel_id !== dragCid); render(); persist('voltou pra gaveta'); }
+  else if (dragKey && inAgenda(dragKey)){ agenda = agenda.filter(a => a.image_key !== dragKey); render(); persist('voltou pra gaveta'); }
+});
+
+// ---------------- clique ----------------
+let selectMode = false, selection = new Set();
+document.addEventListener('click', e => {
+  const rmBtn = e.target.closest('.rm');
+  if (rmBtn){
+    e.stopPropagation();
+    const rmk = rmBtn.dataset.rmK, rmcid = rmBtn.dataset.rmCid;
+    if (rmcid){
+      carousels = carousels.filter(c => c.id !== rmcid);
+      agenda = agenda.filter(a => a.carousel_id !== rmcid);
+      render(); persist('carrossel removido');
+    } else if (rmk){
+      photos = photos.filter(p => p.image_key !== rmk);
+      agenda = agenda.filter(a => a.image_key !== rmk);
+      render(); persist('foto removida');
+    }
+    return;
+  }
+  const cell = e.target.closest('.acard, .cell, .cal-item');
+  if (!cell) return;
+  if (selectMode){
+    const k = cell.dataset.k;
+    if (k){ selection.has(k) ? selection.delete(k) : selection.add(k); render(); renderSelBar(); }
+    return;
+  }
+  if (cell.dataset.cid) openCarSheet(cell.dataset.cid);
+  else if (cell.dataset.k) openSheet(cell.dataset.k);
+});
+
+// ---------------- seleção ----------------
+function renderSelBar(){
+  $('sel-count').textContent = `${selection.size} selecionada${selection.size===1?'':'s'}`;
+  $('sel-bar').classList.toggle('show', selection.size > 0 || selectMode);
+}
+$('sel-btn').addEventListener('click', () => {
+  selectMode = !selectMode;
+  if (!selectMode) selection.clear();
+  $('sel-btn').style.color = selectMode ? 'var(--accent)' : '';
+  render(); renderSelBar();
+});
+$('sel-clear').addEventListener('click', () => { selection.clear(); render(); renderSelBar(); });
+$('sel-simone').addEventListener('click', () => {
+  if (!selection.size){ toast('Selecione fotos primeiro (☑️)', true); return; }
+  openSimone();
+  $('simone-input').placeholder = `${selection.size} fotos selecionadas — escreva o pedido...`;
+  $('simone-input').focus();
+});
+
+// ---------------- histórico de gastos ----------------
+function renderHistory(){
+  const c = priceCfg();
+  const inP = +(c.input ?? 0.15), outP = +(c.output ?? 0.60), brl = +(c.usd_brl ?? 5.5);
+  const evts = (spending && spending.events) ? [...spending.events].reverse() : [];
+  const cost = e => 'R$ ' + ((((e.input||0)/1e6)*inP + ((e.output||0)/1e6)*outP) * brl).toFixed(2).replace('.',',');
+  const rows = evts.map(e => {
+    const d = new Date(e.at);
+    const ds = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    return `<tr><td>${ds}</td><td>${esc(e.event)}</td><td class="r">${(e.tokens||0).toLocaleString('pt-BR')}</td><td class="r">${cost(e)}</td></tr>`;
+  }).join('');
+  const total = evts.reduce((s,e) => s + ((e.input||0)/1e6)*inP + ((e.output||0)/1e6)*outP, 0);
+  $('hist-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💰 Gastos</div>
+    <p class="help">Total: <b>R$ ${(total*brl).toFixed(2).replace('.',',')}</b> nas últimas ${evts.length} ações. <b>Postar é grátis</b> — gasta quando a IA olha fotos e escreve.</p>
+    <table class="htable"><thead><tr><th>Quando</th><th>O quê</th><th class="r">Tokens</th><th class="r">Custo</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Sem gastos ainda.</td></tr>'}</tbody></table>
+    <div class="row"><button class="btn ghost" data-a="close" style="flex:1">Fechar</button></div>
+  `;
+  $('hist-overlay').classList.add('open');
+  $('hist-sheet').querySelector('[data-a="close"]').addEventListener('click', () => $('hist-overlay').classList.remove('open'));
+}
+$('hist-btn').addEventListener('click', renderHistory);
+$('hist-overlay').addEventListener('click', e => { if (e.target.id === 'hist-overlay') $('hist-overlay').classList.remove('open'); });
+
+// ---------------- briefing diário ----------------
+function renderBriefing(){
+  const b = briefing || {};
+  const li = arr => (arr && arr.length) ? arr.map(x => `<li>${esc(x)}</li>`).join('') : '<li class="muted">—</li>';
+  let insHtml = '';
+  if (insights && insights.account && insights.account.length){
+    const acc = {};
+    insights.account.forEach(d => { const v = d.values || []; if (v.length) acc[d.name] = v[v.length-1].value; });
+    const rows = Object.entries(acc).map(([k,v]) => `<span class="chip">${k}: ${v}</span>`).join(' ');
+    if (rows) insHtml = `<div class="label" style="margin-top:10px">📊 Seus números recentes</div><div>${rows}</div>`;
+  }
+  let anHtml = '';
+  if (analysis){
+    anHtml = `
+      <div class="label" style="margin-top:12px">🧠 Análise da Simone</div>
+      ${analysis.resumo ? `<p class="help">${esc(analysis.resumo)}</p>` : ''}
+      ${analysis.o_que_funcionou && analysis.o_que_funcionou.length ? `<div class="label">✅ O que funcionou</div><ul class="blist">${li(analysis.o_que_funcionou)}</ul>` : ''}
+      ${analysis.o_que_mudar && analysis.o_que_mudar.length ? `<div class="label">🔄 O que mudar</div><ul class="blist">${li(analysis.o_que_mudar)}</ul>` : ''}
+      ${analysis.proximas_acoes && analysis.proximas_acoes.length ? `<div class="label">👉 Próximas ações</div><ul class="blist">${li(analysis.proximas_acoes)}</ul>` : ''}
+    `;
+  }
+  $('brief-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💡 Briefing de hoje</div>
+    ${b.manchete ? `<p class="help" style="font-size:14px">${esc(b.manchete)}</p>` : '<p class="help">Ainda não foi gerado. Ele chega todo dia de madrugada.</p>'}
+    ${b.tendencias ? `<div class="label">🔥 Tendências</div><ul class="blist">${li(b.tendencias)}</ul>` : ''}
+    ${b.dicas ? `<div class="label">✍️ Dicas práticas</div><ul class="blist">${li(b.dicas)}</ul>` : ''}
+    ${b.sugestoes_acervo ? `<div class="label">📸 Do seu acervo</div><ul class="blist">${li(b.sugestoes_acervo)}</ul>` : ''}
+    ${insHtml}
+    ${anHtml}
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost" data-a="analyze" style="flex:1">🔄 Analisar agora</button>
+      <button class="btn ghost" data-a="close" style="flex:1">Fechar</button>
+    </div>
+  `;
+  $('brief-overlay').classList.add('open');
+  $('brief-sheet').querySelector('[data-a="close"]').addEventListener('click', () => $('brief-overlay').classList.remove('open'));
+  $('brief-sheet').querySelector('[data-a="analyze"]').addEventListener('click', async () => {
+    if (!pat()){ openSettings(); return; }
+    try {
+      const cur = await ghGet('state/analyze_request.json');
+      await ghPut('state/analyze_request.json', { force: true, at: new Date().toISOString() }, cur ? cur.sha : undefined, 'analyze: agora');
+      toast('Análise pedida! Chega em ~1 min. Recarregue pra ver.');
+      $('brief-overlay').classList.remove('open');
+    } catch(e){ toast('Erro ao pedir análise: ' + e.message, true); }
+  });
+}
+$('brief-btn').addEventListener('click', renderBriefing);
+$('brief-overlay').addEventListener('click', e => { if (e.target.id === 'brief-overlay') $('brief-overlay').classList.remove('open'); });
+
+let curKey = null, curCid = null;
+function openSheet(k){
+  curKey = k; curCid = null;
+  const p = photoByKey(k);
+  const ag = agenda.find(a => a.image_key === k);
+  const isScheduled = !!ag;
+  $('sheet').innerHTML = `
+    <img class="photo" src="${esc(p.url)}" alt="">
+    <div class="row">
+      <button class="btn ok" data-a="approve">✓ Aprovar</button>
+      <button class="btn no" data-a="reject">✗ Recusar</button>
+      <button class="btn swap" data-a="swap">🔄 Trocar foto</button>
+    </div>
+    ${isScheduled ? `
+    <div class="label">Data e hora do post</div>
+    <input type="datetime-local" id="sched" value="${toLocalInput(ag.scheduled_at)}">
+    <div class="row">
+      <button class="btn ghost sm" data-a="up">← Cima</button>
+      <button class="btn ghost sm" data-a="down">Baixo →</button>
+      <button class="btn ghost sm" data-a="unschedule">Tirar da agenda</button>
+    </div>` : `
+    <div class="row"><button class="btn primary" data-a="schedule">📅 Agendar</button></div>`}
+    <div class="label">Legenda</div>
+    <textarea id="cap" rows="4">${esc(p.caption)}</textarea>
+    <div class="count" id="capcount"></div>
+    <div class="label">Hashtags</div>
+    <textarea id="tags" rows="2">${esc((p.hashtags||[]).join(' '))}</textarea>
+    <div class="label">Taguear pessoas (@usuario, vírgula)</div>
+    <input id="usertags" placeholder="@noiva, @noivo" value="${esc((p.user_tags||[]).join(', '))}">
+    <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
+  `;
+  $('overlay').classList.add('open');
+  const cap = $('cap'); const cnt = () => $('capcount').textContent = cap.value.length + ' / 2200';
+  cap.addEventListener('input', cnt); cnt();
+  $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => act(b.dataset.a)));
+}
+
+function openCarSheet(cid){
+  curCid = cid; curKey = null;
+  const c = carouselById(cid);
+  const ag = agenda.find(a => a.carousel_id === cid);
+  $('sheet').innerHTML = `
+    <div class="photos">${(c.urls||[]).map(u => `<img src="${esc(u)}">`).join('')}</div>
+    <div class="label" style="margin-top:10px">${esc(c.title || '')} · ${(c.image_keys||[]).length} fotos</div>
+    <div class="row">
+      <button class="btn ok" data-a="approve">✓ Aprovar</button>
+      <button class="btn no" data-a="reject">✗ Recusar</button>
+    </div>
+    ${ag ? `
+    <div class="label">Data e hora do post</div>
+    <input type="datetime-local" id="sched" value="${toLocalInput(ag.scheduled_at)}">
+    <div class="row"><button class="btn ghost sm" data-a="unschedule">Tirar da agenda</button></div>` : ''}
+    <div class="label">Legenda</div>
+    <textarea id="cap" rows="4">${esc(c.caption)}</textarea>
+    <div class="label">Hashtags</div>
+    <textarea id="tags" rows="2">${esc((c.hashtags||[]).join(' '))}</textarea>
+    <div class="row"><button class="btn primary" data-a="save" style="flex:2">Salvar</button></div>
+  `;
+  $('overlay').classList.add('open');
+  $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => actCar(b.dataset.a)));
+}
+
+function act(a){
+  const p = photoByKey(curKey); if (!p) return;
+  if (a === 'approve') p.status = 'approved';
+  else if (a === 'reject') p.status = 'rejected';
+  else if (a === 'swap'){ swap(curKey); return; }
+  else if (a === 'schedule'){ agenda.push({image_key: curKey, scheduled_at: nextFreeSlot()}); }
+  else if (a === 'unschedule'){ agenda = agenda.filter(x => x.image_key !== curKey); }
+  else if (a === 'up' || a === 'down'){
+    const i = agenda.findIndex(x => x.image_key === curKey);
+    const j = a === 'up' ? i-1 : i+1;
+    if (i >= 0 && j >= 0 && j < agenda.length){ [agenda[i], agenda[j]] = [agenda[j], agenda[i]]; }
+  }
+  else if (a === 'save'){
+    p.caption = $('cap').value.trim();
+    const t = $('tags').value.trim(); p.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
+    const ut = $('usertags').value.trim();
+    p.user_tags = ut ? ut.split(',').map(s => s.trim().replace(/^@/,'')).filter(Boolean).map(s => '@'+s) : [];
+    const s = $('sched'); if (s){ const ag = agenda.find(x => x.image_key === curKey); if (ag) ag.scheduled_at = fromLocalInput(s.value) || ag.scheduled_at; }
+  }
+  if (a === 'save'){ closeSheet(); render(); persist('legenda editada'); }
+  else { closeSheet(); render(); persist('atualizado'); }
+}
+
+function actCar(a){
+  const c = carouselById(curCid); if (!c) return;
+  if (a === 'approve') c.status = 'approved';
+  else if (a === 'reject') c.status = 'rejected';
+  else if (a === 'unschedule'){ agenda = agenda.filter(x => x.carousel_id !== curCid); }
+  else if (a === 'save'){
+    c.caption = $('cap').value.trim();
+    const t = $('tags').value.trim(); c.hashtags = t ? t.split(/\s+/).filter(Boolean) : [];
+    const s = $('sched'); if (s){ const ag = agenda.find(x => x.carousel_id === curCid); if (ag) ag.scheduled_at = fromLocalInput(s.value) || ag.scheduled_at; }
+  }
+  if (a === 'save'){ closeSheet(); render(); persist('carrossel editado'); }
+  else { closeSheet(); render(); persist('atualizado'); }
+}
+
+function swap(k){
+  const pool = photos.filter(x => x.image_key !== k && !inAgenda(x.image_key));
+  if (!pool.length){ toast('Sem fotos na gaveta pra trocar', true); return; }
+  const e = pool[0];
+  agenda.forEach(a => { if (a.image_key === k) a.image_key = e.image_key; });
+  closeSheet(); render(); persist('foto trocada');
+}
+
+function closeSheet(){ $('overlay').classList.remove('open'); curKey = null; curCid = null; }
+$('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeSheet(); });
+
+async function persist(msg){
+  if (!isHosted){ toast(msg + ' (preview)'); return; }
+  if (!pat()){ openSettings(); return; }
+  try {
+    const cur = await ghGet('state/queue.json');
+    const obj = { generated_at: cur ? cur.data.generated_at : generatedAt, photos, extras, agenda, carousels };
+    await ghPut('state/queue.json', obj, cur ? cur.sha : undefined, msg || 'edição pelo app');
+    toast('Salvo na nuvem ✓');
+  } catch(e){ toast('Erro ao salvar: ' + e.message, true); }
+}
+
+// ---------------- configurações ----------------
+function openSettings(){
+  const pc = priceCfg();
+  $('settings-sheet').innerHTML = `
+    <div class="label">Chave de acesso (token do GitHub)</div>
+    <p class="help">Cole um <b>personal access token</b> com acesso ao repositório <b>${REPO_OWNER}/${REPO_NAME}</b> (permissão <b>Contents: Read &amp; Write</b>).</p>
+    <input id="pat-input" type="password" placeholder="github_pat_..." value="${esc(pat())}">
+    <div class="label">Preço do Gemini (USD por 1M tokens)</div>
+    <p class="help">Padrão: entrada 0,15 · saída 0,60.</p>
+    <input id="price-in" type="number" step="0.01" min="0" placeholder="entrada" value="${pc.input ?? 0.15}">
+    <div style="height:6px"></div>
+    <input id="price-out" type="number" step="0.01" min="0" placeholder="saída" value="${pc.output ?? 0.60}">
+    <div class="label">Cotação USD → BRL</div>
+    <input id="price-brl" type="number" step="0.01" min="0" placeholder="ex: 5.50" value="${pc.usd_brl ?? 5.5}">
+    <div class="label">Análise de insights</div>
+    <p class="help">A Simone analisa seus números a cada N dias (padrão 15) e sugere ajustes.</p>
+    <input id="insights-interval" type="number" step="1" min="1" max="90" placeholder="dias" value="${insightsInterval ?? 15}">
+    <div class="row">
+      <button class="btn ghost" data-a="cancel">Cancelar</button>
+      <button class="btn primary" data-a="savecfg" style="flex:2">Salvar</button>
+    </div>
+  `;
+  $('settings-overlay').classList.add('open');
+  $('settings-sheet').querySelector('[data-a="savecfg"]').addEventListener('click', () => {
+    const p = $('pat-input').value.trim();
+    if (p) localStorage.setItem(PAT_KEY, p);
+    localStorage.setItem(PRICE_KEY, JSON.stringify({ input: +$('price-in').value, output: +$('price-out').value, usd_brl: +$('price-brl').value }));
+    insightsInterval = Math.max(1, +$('insights-interval').value || 15);
+    (async () => {
+      try {
+        const cur = await ghGet('state/config.json');
+        await ghPut('state/config.json', { insights_interval_days: insightsInterval }, cur ? cur.sha : undefined, 'config: intervalo');
+      } catch(e){}
+    })();
+    $('settings-overlay').classList.remove('open');
+    toast('Configurações salvas ✓'); render();
+    if (isHosted && pat()) loadRemote();
+  });
+  $('settings-sheet').querySelector('[data-a="cancel"]').addEventListener('click', () => $('settings-overlay').classList.remove('open'));
+}
+$('gear').addEventListener('click', openSettings);
+$('settings-overlay').addEventListener('click', e => { if (e.target.id === 'settings-overlay') $('settings-overlay').classList.remove('open'); });
+
+// ---------------- Simone ----------------
+let lastSimoneAt = null;
+function openSimone(){
+  $('simone-sheet').innerHTML = `
+    <div class="label" style="margin-top:0">💬 Simone</div>
+    <div id="chat" style="max-height:50vh; overflow-y:auto"></div>
+    <div class="chat-input">
+      <input id="simone-input" placeholder='Ex.: "faça um carrossel do casal Ana e Pedro"'>
+      <button id="simone-send">Enviar</button>
+    </div>
+  `;
+  $('simone-overlay').classList.add('open');
+  $('simone-send').addEventListener('click', () => {
+    const v = $('simone-input').value.trim();
+    if (v){ sendSimone(v); $('simone-input').value = ''; }
+  });
+  $('simone-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = $('simone-input').value.trim(); if (v){ sendSimone(v); $('simone-input').value = ''; } } });
+  // carrega última resposta se existir
+  if (lastSimoneAt){ addChat('simone', lastSimoneReply || ''); }
+}
+function addChat(who, text){
+  const c = $('chat'); if (!c) return;
+  const d = document.createElement('div');
+  d.className = 'chat-msg ' + (who === 'user' ? 'user' : (who === 'simone' ? 'simone' : 'simone thinking'));
+  d.textContent = text;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+async function sendSimone(text){
+  addChat('user', text);
+  if (!isHosted){ addChat('simone', '(no preview a Simone não roda — ela funciona no app hospedado)'); return; }
+  if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
+  try {
+    const cur = await ghGet('state/simone_request.json');
+    await ghPut('state/simone_request.json', { request: text, image_keys: [...selection], at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
+    selection.clear(); renderSelBar();
+    let before = null;
+    try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
+    addChat('simone', '…');
+    const thinkEl = $('chat').lastElementChild;
+    for (let i=0; i<36; i++){
+      await new Promise(r => setTimeout(r, 5000));
+      try {
+        const r = await ghGet('state/simone_reply.json');
+        if (r && r.data.at !== before){
+          if (thinkEl) thinkEl.remove();
+          addChat('simone', r.data.reply);
+          lastSimoneReply = r.data.reply;
+          await loadRemote();
+          return;
+        }
+      } catch(_){}
+    }
+    if (thinkEl) thinkEl.remove();
+    addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
+  } catch(e){
+    addChat('simone', 'Erro: ' + e.message);
+  }
+}
+$('simone-fab').addEventListener('click', openSimone);
+$('simone-overlay').addEventListener('click', e => { if (e.target.id === 'simone-overlay') $('simone-overlay').classList.remove('open'); });
+
+// ---------------- carregamento ----------------
+async function loadRemote(){
+  try {
+    const [q, p, u, s, b, i, sp, an, cf] = await Promise.all([ghGet('state/queue.json'), ghGet('state/posted.json'), ghGet('state/usage.json'), ghGet('state/simone_reply.json'), ghGet('state/briefing.json'), ghGet('state/insights.json'), ghGet('state/spending.json'), ghGet('state/analysis.json'), ghGet('state/config.json')]);
+    if (q){ photos = q.data.photos || []; extras = q.data.extras || []; agenda = q.data.agenda || []; carousels = q.data.carousels || []; generatedAt = q.data.generated_at; }
+    if (p){ posted = new Set(Object.keys(p.data.posted || {})); }
+    if (u){ usage = u.data; }
+    if (s){ lastSimoneReply = s.data.reply; lastSimoneAt = s.data.at; }
+    if (b){ briefing = b.data; }
+    if (i){ insights = i.data; }
+    if (sp){ spending = sp.data; }
+    if (an){ analysis = an.data; }
+    if (cf){ insightsInterval = cf.data.insights_interval_days ?? 15; }
+    render();
+  } catch(e){ toast('Erro ao carregar: ' + e.message, true); }
+}
+
+(function init(){
+  const raw = document.getElementById('data').textContent.trim();
+  if (raw && raw !== 'null' && raw !== '{}'){
+    const D = JSON.parse(raw);
+    photos = D.photos || []; extras = D.extras || []; agenda = D.agenda || []; carousels = D.carousels || [];
+    posted = new Set(D.posted || []); usage = D.usage || {};
+    render();
+  } else {
+    isHosted = true;
+    if (pat()) loadRemote(); else openSettings();
+  }
+})();
+</script>
+</body>
+</html>
