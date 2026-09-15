@@ -132,6 +132,7 @@
     <h1>Cura Poster</h1>
     <div class="tokens" id="tokens">—</div>
     <button class="gear" id="sel-btn" title="Selecionar fotos">☑️</button>
+    <button class="gear" id="brief-btn" title="Varredura de Tendências (Casamentos)">🔥</button>
     <button class="gear" id="hist-btn" title="Histórico de gastos">💰</button>
     <button class="gear" id="refresh-btn" title="Atualizar dados">🔄</button>
     <button class="gear" id="gear" title="Configurar">⚙️</button>
@@ -600,8 +601,11 @@ function renderBriefing(){
     `;
   }
   $('brief-sheet').innerHTML = `
-    <div class="label" style="margin-top:0">💡 Briefing de hoje</div>
-    ${b.manchete ? `<p class="help" style="font-size:14px">${esc(b.manchete)}</p>` : '<p class="help">Ainda não foi gerado. Ele chega todo dia de madrugada.</p>'}
+    <div class="label" style="margin-top:0">🔥 Varredura Diária de Casamentos</div>
+    ${b.manchete ? `<p class="help" style="font-size:14px">${esc(b.manchete)}</p>` : '<p class="help">Aguardando a primeira varredura diária.</p>'}
+    ${b.tendencias_casamento ? `<div class="label">🌟 Tendências do Mercado</div><ul class="blist">${li(b.tendencias_casamento)}</ul>` : ''}
+    ${b.temas_em_alta ? `<div class="label">📈 Temas em Alta</div><ul class="blist">${li(b.temas_em_alta)}</ul>` : ''}
+    ${b.sugestoes_conteudo ? `<div class="label">💡 Sugestões de Conteúdo</div><ul class="blist">${li(b.sugestoes_conteudo)}</ul>` : ''}
     ${b.tendencias ? `<div class="label">🔥 Tendências</div><ul class="blist">${li(b.tendencias)}</ul>` : ''}
     ${b.dicas ? `<div class="label">✍️ Dicas práticas</div><ul class="blist">${li(b.dicas)}</ul>` : ''}
     ${b.sugestoes_acervo ? `<div class="label">📸 Do seu acervo</div><ul class="blist">${li(b.sugestoes_acervo)}</ul>` : ''}
@@ -624,6 +628,7 @@ function renderBriefing(){
     } catch(e){ toast('Erro ao pedir análise: ' + e.message, true); }
   });
 }
+$('brief-btn').addEventListener('click', renderBriefing);
 $('refresh-btn').addEventListener('click', () => {
   toast('Atualizando...');
   window.location.reload();
