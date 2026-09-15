@@ -25,6 +25,10 @@ if (typeof window.APP_DATA !== 'undefined' && window.APP_DATA) {
 }
 </script>
 
+
+
+
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Cura Poster</title>
@@ -163,7 +167,7 @@ if (typeof window.APP_DATA !== 'undefined' && window.APP_DATA) {
     <button class="gear" id="sel-btn" title="Selecionar fotos" onclick="toggleSelectMode()">☑️</button>
     <button class="gear" id="brief-btn" title="Varredura de Tendências (Casamentos)" onclick="openBriefing()">🔥</button>
     <button class="gear" id="hist-btn" title="Histórico de gastos" onclick="openHistory()">💰</button>
-    <button class="gear" id="refresh-btn" title="Atualizar dados" onclick="loadRemote()">🔄</button>
+    <button class="gear" id="refresh-btn" onclick="location.reload()" title="Atualizar dados" onclick="loadRemote()">🔄</button>
     <button class="gear" id="gear" title="Configurar" onclick="openSettings()">⚙️</button>
   </div>
   <div class="hint" id="hint">Arraste para reordenar. Toque numa foto para editar. Use o botão rosa pra falar com a Simone.</div>
@@ -225,6 +229,7 @@ let viewMode = localStorage.getItem('cp_view') || 'list', calMonth = new Date();
 let lastSimoneAt = null;
 let simoneRunning = false, simoneCancel = false;
 let chatHistory = [];
+let curKey = null, curCid = null;
 
 const REPO_OWNER = 'orlandolovecapture-ops';
 const REPO_NAME = 'cura-poster';
@@ -484,8 +489,19 @@ document.addEventListener('click', e => {
     if (k){ selection.has(k) ? selection.delete(k) : selection.add(k); render(); renderSelBar(); }
     return;
   }
-  if (cell.dataset.cid) openCarSheet(cell.dataset.cid);
-  else if (cell.dataset.k) openSheet(cell.dataset.k);
+  const cid = cell.dataset.cid || cell.closest('[data-cid]')?.dataset.cid;
+  const k = cell.dataset.k || cell.closest('[data-k]')?.dataset.k;
+  if (cid) { openCarSheet(cid); return; }
+  if (k) { openSheet(k); return; }
+  // Fallback: busca pelo ID pai .acard-wrap ou similar
+  const wrap = cell.closest('.acard-wrap');
+  if (wrap) {
+    const aid = wrap.dataset.aid;
+    const car = carousels.find(c => c.id === aid);
+    if (car) { openCarSheet(aid); return; }
+    const pho = photoByKey(aid);
+    if (pho) { openSheet(aid); return; }
+  }
 });
 
 // ---------------- swipe para excluir na agenda (estilo Mail iOS/Mac) ----------------
@@ -693,7 +709,7 @@ $('refresh-btn').addEventListener('click', () => {
 });
 $('brief-overlay').addEventListener('click', e => { if (e.target.id === 'brief-overlay') $('brief-overlay').classList.remove('open'); });
 
-let curKey = null, curCid = null;
+
 function openSheet(k){
   curKey = k; curCid = null;
   const p = photoByKey(k);
