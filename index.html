@@ -342,7 +342,7 @@ function render(){
   ];
   $('gaveta').innerHTML = gav.map(g => `
     <div class="cell ${g.status==='rejected'?'dim':''}" draggable="true" data-k="${esc(g.t==='s'?g.k:'')}" data-cid="${esc(g.t==='c'?g.k:'')}">
-      <img loading="lazy" src="${esc(g.url)}" alt="">
+      <img loading="lazy" src="${esc(g.url)}" alt="" draggable="false">
       ${g.t==='c'?`<span class="badge-left">▦ ${g.count} fotos</span>`:''}
       <button class="rm" data-rm-k="${esc(g.t==='s'?g.k:'')}" data-rm-cid="${esc(g.t==='c'?g.k:'')}" title="Remover">×</button>
     </div>`).join('');
