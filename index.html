@@ -94,7 +94,11 @@
   .row .btn { flex: 1; }
 
   /* chat Simone */
-  #simone-fab { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-size: 24px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 60; }
+  #simone-fab { position: fixed; right: 18px; bottom: 84px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-size: 24px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.4); z-index: 60; }
+  .prog-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; display: none; }
+  .prog-bar.active { display: block; }
+  .prog-bar .fill { width: 30%; height: 100%; background: var(--accent); animation: ind 1.2s infinite linear; }
+  @keyframes ind { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
   .chat-msg { margin: 8px 0; max-width: 85%; padding: 10px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
   .chat-msg.user { background: var(--accent); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
   .chat-msg.simone { background: var(--card); border: 1px solid var(--border); margin-right: auto; border-bottom-left-radius: 4px; }
@@ -251,9 +255,11 @@ function pillCar(c){ return posted.has(c.id) ? '<span class="pill ok">publicado<
 
 function renderList(){
   $('agenda').innerHTML = agenda.map((a,i) => {
-    if (a.kind === 'carousel'){
+    const isCar = a.kind === 'carousel';
+    const id = isCar ? a.carousel_id : a.image_key;
+    const past = new Date(a.scheduled_at) < new Date();
+    if (isCar){
       const c = carouselById(a.carousel_id); if (!c) return '';
-      const past = new Date(a.scheduled_at) < new Date();
       const img1 = c.urls && c.urls[0] ? c.urls[0] : '';
       const img2 = c.urls && c.urls[1] ? c.urls[1] : '';
       return `<div class="acard" draggable="true" data-cid="${esc(c.id)}">
@@ -262,17 +268,18 @@ function renderList(){
         <div class="info">
           <div class="cap">${esc(c.caption || c.title || '(carrossel)')}</div>
           <div class="meta">${pillCar(c)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span> · ${(c.image_keys||[]).length} fotos</div>
-        </div></div>`;
+        </div>
+        <button class="rm" data-rm-agenda="${esc(id)}" title="Remover da agenda" style="position:relative;top:auto;right:auto;opacity:1;flex:none;margin-left:6px">×</button></div>`;
     }
     const p = photoByKey(a.image_key); if (!p) return '';
-    const past = new Date(a.scheduled_at) < new Date();
     return `<div class="acard" draggable="true" data-k="${esc(a.image_key)}">
       <span class="grip">⠿</span><span class="num">${i+1}</span>
       <img class="thumb" src="${esc(p.url)}" alt="">
       <div class="info">
         <div class="cap">${esc(p.caption || '(sem legenda)')}</div>
         <div class="meta">${pillSingle(p)} <span style="${past?'color:var(--amber)':''}">${fmt(a.scheduled_at)}</span>${(p.user_tags||[]).length?' · '+esc((p.user_tags||[]).join(' ')):''}</div>
-      </div></div>`;
+      </div>
+      <button class="rm" data-rm-agenda="${esc(id)}" title="Remover da agenda" style="position:relative;top:auto;right:auto;opacity:1;flex:none;margin-left:6px">×</button></div>`;
   }).join('');
 }
 function renderCal(){
@@ -381,6 +388,14 @@ gavetaEl.addEventListener('drop', e => {
 // ---------------- clique ----------------
 let selectMode = false, selection = new Set();
 document.addEventListener('click', e => {
+  const rmAgendaBtn = e.target.closest('[data-rm-agenda]');
+  if (rmAgendaBtn){
+    e.stopPropagation();
+    const aid = rmAgendaBtn.dataset.rmAgenda;
+    agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
+    render(); persist('removido da agenda');
+    return;
+  }
   const rmBtn = e.target.closest('.rm');
   if (rmBtn){
     e.stopPropagation();
@@ -540,9 +555,27 @@ function openCarSheet(cid){
   curCid = cid; curKey = null;
   const c = carouselById(cid);
   const ag = agenda.find(a => a.carousel_id === cid);
+  const keys = c.image_keys || [];
+  const urls = c.urls || [];
+  const photosHtml = keys.map((k, idx) => {
+    const u = urls[idx] || '';
+    return `<div style="position:relative;flex:none">
+      <img src="${esc(u)}" style="width:80px;height:80px;border-radius:8px;object-fit:cover;border:1px solid var(--border)">
+      <button class="rm" data-car-rm="${idx}" style="opacity:1;top:2px;right:2px;width:18px;height:18px;font-size:10px">×</button>
+      <div style="display:flex;justify-content:space-between;margin-top:2px">
+        ${idx>0?`<button class="btn ghost sm" style="padding:1px 4px;font-size:10px" data-car-move="${idx},-1">‹</button>`:'<span></span>'}
+        ${idx<keys.length-1?`<button class="btn ghost sm" style="padding:1px 4px;font-size:10px" data-car-move="${idx},1">›</button>`:'<span></span>'}
+      </div>
+    </div>`;
+  }).join('');
+
   $('sheet').innerHTML = `
-    <div class="photos">${(c.urls||[]).map(u => `<img src="${esc(u)}">`).join('')}</div>
-    <div class="label" style="margin-top:10px">${esc(c.title || '')} · ${(c.image_keys||[]).length} fotos</div>
+    <div class="label" style="margin-top:0">Fotos do carrossel (${keys.length})</div>
+    <div class="photos" style="gap:10px;align-items:flex-start">${photosHtml}</div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost sm" data-car-add="1">+ Adicionar foto da gaveta</button>
+    </div>
+    <div class="label" style="margin-top:10px">${esc(c.title || 'Carrossel')}</div>
     <div class="row">
       <button class="btn ok" data-a="approve">✓ Aprovar</button>
       <button class="btn no" data-a="reject">✗ Recusar</button>
@@ -559,6 +592,30 @@ function openCarSheet(cid){
   `;
   $('overlay').classList.add('open');
   $('sheet').querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => actCar(b.dataset.a)));
+  $('sheet').querySelectorAll('[data-car-rm]').forEach(b => b.addEventListener('click', () => {
+    const idx = +b.dataset.carRm;
+    c.image_keys.splice(idx, 1);
+    c.urls.splice(idx, 1);
+    openCarSheet(cid);
+  }));
+  $('sheet').querySelectorAll('[data-car-move]').forEach(b => b.addEventListener('click', () => {
+    const [idx, dir] = b.dataset.carMove.split(',').map(Number);
+    const target = idx + dir;
+    if (target >= 0 && target < c.image_keys.length){
+      [c.image_keys[idx], c.image_keys[target]] = [c.image_keys[target], c.image_keys[idx]];
+      [c.urls[idx], c.urls[target]] = [c.urls[target], c.urls[idx]];
+      openCarSheet(cid);
+    }
+  }));
+  const addBtn = $('sheet').querySelector('[data-car-add]');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    const avail = photos.filter(p => !c.image_keys.includes(p.image_key));
+    if (!avail.length){ toast('Sem fotos livres na gaveta', true); return; }
+    const p = avail[0];
+    c.image_keys.push(p.image_key);
+    c.urls.push(p.url);
+    openCarSheet(cid);
+  });
 }
 
 function act(a){
@@ -669,6 +726,7 @@ function openSimone(){
   $('simone-sheet').innerHTML = `
     <div class="label" style="margin-top:0">💬 Simone</div>
     <div id="chat" style="max-height:50vh; overflow-y:auto"></div>
+    <div class="prog-bar" id="prog-bar"><div class="fill"></div></div>
     <div class="chat-input">
       <input id="simone-input" placeholder='Ex.: "faça um carrossel do casal Ana e Pedro"'>
       <button id="simone-send">Enviar</button>
@@ -695,13 +753,15 @@ async function sendSimone(text){
   addChat('user', text);
   if (!isHosted){ addChat('simone', '(no preview a Simone não roda — ela funciona no app hospedado)'); return; }
   if (!pat()){ addChat('simone', 'Configure a chave na ⚙️ primeiro.'); return; }
+  const prog = $('prog-bar');
+  if (prog) prog.classList.add('active');
   try {
     const cur = await ghGet('state/simone_request.json');
     await ghPut('state/simone_request.json', { request: text, image_keys: [...selection], at: new Date().toISOString() }, cur ? cur.sha : undefined, 'simone: pedido');
     selection.clear(); renderSelBar();
     let before = null;
     try { const r = await ghGet('state/simone_reply.json'); before = r ? r.data.at : null; } catch(_){}
-    addChat('simone', '…');
+    addChat('simone', 'Processando pedido...');
     const thinkEl = $('chat').lastElementChild;
     for (let i=0; i<36; i++){
       await new Promise(r => setTimeout(r, 5000));
@@ -709,6 +769,7 @@ async function sendSimone(text){
         const r = await ghGet('state/simone_reply.json');
         if (r && r.data.at !== before){
           if (thinkEl) thinkEl.remove();
+          if (prog) prog.classList.remove('active');
           addChat('simone', r.data.reply);
           lastSimoneReply = r.data.reply;
           await loadRemote();
@@ -717,8 +778,10 @@ async function sendSimone(text){
       } catch(_){}
     }
     if (thinkEl) thinkEl.remove();
+    if (prog) prog.classList.remove('active');
     addChat('simone', 'Demorei demais (o robô pode estar ocupado). Tente de novo em instantes.');
   } catch(e){
+    if (prog) prog.classList.remove('active');
     addChat('simone', 'Erro: ' + e.message);
   }
 }
