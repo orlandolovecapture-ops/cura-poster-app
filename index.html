@@ -448,10 +448,12 @@ function onSwipeMove(clientX, e){
   if (!swipeCard) return;
   swipeCurrentX = clientX;
   const diff = swipeCurrentX - swipeStartX;
-  if (Math.abs(diff) > 8) wasSwiped = true;
-  if (diff < 0 && diff > -140){
+  if (diff < 0){
     if (e && e.cancelable) e.preventDefault();
-    swipeCard.style.transform = `translateX(${diff}px)`;
+    if (Math.abs(diff) > 8) wasSwiped = true;
+    swipeCard.style.transform = `translateX(${Math.max(diff, -140)}px)`;
+  } else {
+    swipeCard.style.transform = `translateX(0px)`;
   }
 }
 
@@ -459,17 +461,21 @@ function onSwipeEnd(){
   if (!swipeCard) return;
   const diff = swipeCurrentX - swipeStartX;
   swipeCard.style.transition = 'transform .2s ease';
-  swipeCard.style.transform = '';
-  if (diff < -70){
+  if (diff < -90){
+    swipeCard.style.transform = 'translateX(-100%)';
     const wrap = swipeCard.closest('.acard-wrap');
     if (wrap){
       const aid = wrap.dataset.aid;
-      agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
-      render(); persist('removido da agenda');
-      toast('Post removido da agenda');
+      setTimeout(() => {
+        agenda = agenda.filter(a => (a.carousel_id !== aid && a.image_key !== aid));
+        render(); persist('removido da agenda');
+        toast('Post removido da agenda');
+      }, 200);
     }
+  } else {
+    swipeCard.style.transform = 'translateX(0px)';
   }
-  setTimeout(() => { wasSwiped = false; }, 100);
+  setTimeout(() => { wasSwiped = false; }, 150);
   swipeCard = null;
 }
 
