@@ -743,7 +743,11 @@ function openCarSheet(cid){
 function act(a){
   const p = photoByKey(curKey); if (!p) return;
   if (a === 'approve') p.status = 'approved';
-  else if (a === 'reject') p.status = 'rejected';
+  else if (a === 'reject') {
+    const reason = prompt('Por que você recusou esta foto? (A Simone vai aprender com seu feedback):', 'Foto escura / ângulo repetido');
+    p.status = 'rejected';
+    p.reject_reason = reason || '';
+  }
   else if (a === 'swap'){ swap(curKey); return; }
   else if (a === 'schedule'){ agenda.push({image_key: curKey, scheduled_at: nextFreeSlot()}); }
   else if (a === 'unschedule'){ agenda = agenda.filter(x => x.image_key !== curKey); }
@@ -767,7 +771,11 @@ function act(a){
 function actCar(a){
   const c = carouselById(curCid); if (!c) return;
   if (a === 'approve') c.status = 'approved';
-  else if (a === 'reject') c.status = 'rejected';
+  else if (a === 'reject') {
+    const reason = prompt('Por que você recusou este carrossel? (A Simone vai aprender com seu feedback):', 'Fotos muito parecidas');
+    c.status = 'rejected';
+    c.reject_reason = reason || '';
+  }
   else if (a === 'unschedule'){ agenda = agenda.filter(x => x.carousel_id !== curCid); }
   else if (a === 'save'){
     c.caption = $('cap').value.trim();
